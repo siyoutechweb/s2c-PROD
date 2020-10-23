@@ -1,0 +1,452 @@
+<?php
+
+
+namespace App\Logic;
+
+
+use App\Models\Product;
+use App\Models\StatisticOrder;
+use App\Models\StatisticProduct;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+
+/**
+ *
+ *
+ * Class ShopOwnerStatisticLogic
+ *
+ * @package App\Logic
+ */
+class ShopOwnerStatisticLogic
+{
+
+
+    /**
+     *
+     * statistics By Order State ????????
+     *
+     *
+     * @param $chain_id
+     * @param string $from
+     * @param string $to
+     * @return mixed
+     */
+
+    public static function statisticsByOrderState($chain_id, $from = '', $to = ''){
+       // echo $chain_id . "chain_id<br>" . $from . "from<br>" . $to . "to<br>";
+        $rs = StatisticOrder::select([
+            DB::raw('sum(paid) as paid'),
+            DB::raw('sum(confirmed) as confirmed'),
+            DB::raw('sum(pended) as  pended'),
+            'days'
+        ])
+            // ->where(['chain_id'=>$chain_id])
+            ->whereBetween('days', self::buildBetween($from, $to))->groupBy('days')->get();
+
+        $label = [];
+
+        $data = [
+            'paid' => [],
+            'pended' => [],
+            'confirmed' => [],
+        ];
+        foreach ($rs as $v) {
+            $label[] = $v['days'];
+            $data['paid'][] = $v['paid'];
+            $data['pended'][] = $v['pended'];
+            $data['confirmed'][] = $v['confirmed'];
+        }
+        return ['label' => $label, 'data' => $data];
+
+
+    }
+
+
+    /**
+     * statistics by payment method ????????
+     *
+     * @param $chain_id
+     * @param string $show_way options [day,month],day:by days ,month:by_month
+     * @param string $from
+     * @param string $to
+     * @return array
+     */
+    public static function statisticsByPaymentMethodId($chain_id, $show_way = 'day', $from = '', $to = ''){
+        $where['chain_id'] = $chain_id;
+
+
+        if ($show_way == 'month') {
+
+            $rs = StatisticOrder::select([
+                DB::raw('days'),
+                DB::raw('sum(card) as card'),
+                DB::raw('sum(check) as check'),
+                DB::raw('sum(cash) as cash')])
+                ->where('chain_id', $chain_id)
+                ->whereBetween('days', self::buildBetween($from, $to))
+                //->groupBy(DB::raw('DATE_FORMAT(days,"%Y-%m")'))
+                ->get();
+
+        } else {
+            $rs = StatisticOrder::select(['card', 'check', 'cash', 'days'])
+                ->where($where)
+                ->whereBetween('days', self::buildBetween($from, $to))
+                ->get();
+        }
+
+        $data = [
+            'card' => [],
+            'check' => [],
+            'cash' => [],
+        ];
+        $label = [];
+        foreach ($rs as $k => $v) {
+
+            $label[] = $v['days'];
+            $data['card'][] = $v['card'];
+            $data['check'][] = $v['check'];
+            $data['cash'][] = $v['cash'];
+
+        }
+        return ['label' => $label, 'data' => $data];
+    }
+
+
+    /**
+     * ??????
+     *
+     * @param $chain_id
+     * @param string $category_id
+     * @param string $from
+     * @param string $to
+     * @return array
+     */
+    public static function statisticsProductsByCategory($chain_id, $category_id = '', $from = '', $to = ''){
+
+        $where['chain_id'] = $chain_id;
+        if ($category_id) {
+            $where['category_id'] = $category_id;
+        }
+        $rs = StatisticProduct::where($where)
+            ->with('product')->with('category')
+            ->whereBetween('days', self::buildBetween($from, $to))
+            ->orderBy('days', 'desc')->get();
+
+        $label = $data = $price = [];
+        foreach ($rs as $k => $v) {
+
+            $label[] = $v['product']['product_name'];
+            $data[] = $v['sales'];
+            $price[] = $v['price'];
+
+        }
+
+        return ['label' => $label, 'sales' => $data, 'price' => $price];
+
+    }
+
+
+    /**
+     * ????KPI,??????
+     *
+     * @param $chain_id
+     * @param string $from
+     * @param string $to
+     * @return array
+     */
+    public static function statisticsKPI($chain_id, $from = '', $to = ''){
+
+        $where['chain_id'] = $chain_id;
+        $rs = StatisticOrder::where($where)->whereBetween('days', self::buildBetween($from, $to))->get();
+        $data = [];
+        $label = [];
+        foreach ($rs as $k => $v) {
+
+            $label[] = $v['days'];
+            $data[] = $v['income'];
+
+        }
+        return ['label' => $label, 'data' => $data];
+
+    }
+
+    /**
+     * ??????,?web??????,??,??????:
+     *
+     * @param $chain_id
+     * @param $store_id
+     * @param string $start
+     * @param string $end
+     * @return array
+     */
+    public static function statisticsOrder($chain_id, $store_id, $start = '', $end = ''){
+        $rs = StatisticOrder::select([
+            DB::raw('days as period'),
+            DB::raw('sum(income) as total')])
+            ->where('store_id', $store_id)
+            ->where('chain_id', $chain_id)
+            ->whereBetween('days', self::buildBetween($start, $end))
+            ->groupBy('days')
+            ->get();
+        $month = StatisticOrder::select([
+            DB::raw("DATE_FORMAT(days,'%m')  as period"),
+            DB::raw('sum(income) as total')])
+            ->where('store_id', $store_id)
+            ->where('chain_id', $chain_id)
+            ->whereBetween('days', self::buildBetween($start, $end))
+            ->groupBy("period")
+            ->get();
+        $year = StatisticOrder::select([
+            DB::raw("DATE_FORMAT(days,'%Y')  as year"),
+            DB::raw('sum(income) as total')])
+            ->where('store_id', $store_id)
+            ->where('chain_id', $chain_id)
+            ->groupBy("year")
+            ->get();
+        $data = [];
+        $data['days'] = $rs;
+        $data['months'] = $month;
+        $data['years'] = $year;
+        return $data;
+    }
+
+    /**
+     * ????????,?web??????,??,??????:
+     *
+     * @param $chain_id
+     * @param $store_id
+     * @param string $start
+     * @param string $end
+     * @return array
+     */
+    public static function staticsOrderQuantity($chain_id, $store_id, $start = '', $end = '') {
+        $rs = StatisticOrder::select([
+            DB::raw('days as period'),
+            DB::raw('count(*) as total')])
+            ->where('store_id', $store_id)
+            ->where('chain_id', $chain_id)
+            ->whereBetween('days', self::buildBetween($start, $end))
+            ->groupBy('days')
+            ->get();
+        $month = StatisticOrder::select([
+            DB::raw("DATE_FORMAT(days,'%m')  as period"),
+            DB::raw('count(*) as total')])
+            ->where('store_id', $store_id)
+            ->where('chain_id', $chain_id)
+            //->whereBetween('days', self::buildBetween($start, $end))
+            ->groupBy("period")
+            ->get();
+        $year = StatisticOrder::select([
+            DB::raw("DATE_FORMAT(days,'%Y')  as year"),
+            DB::raw('count(*) as total')])
+            ->where('store_id', $store_id)
+            ->where('chain_id', $chain_id)
+            ->groupBy("year")
+            ->get();
+        $total = StatisticOrder::where('store_id', $store_id)
+            ->where('chain_id', $chain_id)
+            ->count();
+        $data = [];
+        $data['days'] = $rs;
+        $data['months'] = $month;
+        $data['years'] = $year;
+        $data['total'] = $total;
+        return $data;
+    }
+
+    /**
+     * ???????? Orders by suppliers
+     *
+     * @param $chain_id
+     * @param string $start
+     * @param string $end
+     * @return array
+     */
+    public static function staticsOrderSupplier($store_id, $chain_id, $start = '', $end = ''){
+        $rs = StatisticOrder::select([
+            DB::raw('days as period'),
+            DB::raw('count(*) as total')])
+            ->where('store_id', $store_id)
+            ->where('chain_id', $chain_id)
+            ->whereBetween('days', self::buildBetween($start, $end))
+            ->groupBy('days')
+            ->get();
+        $month = StatisticOrder::select([
+            DB::raw("DATE_FORMAT(days,'%m')  as period"),
+            DB::raw('count(*) as total')])
+            ->where('store_id', $store_id)
+            ->where('chain_id', $chain_id)
+            ->whereBetween('days', self::buildBetween($start, $end))
+            ->groupBy("period")
+            ->get();
+        $year = StatisticOrder::select([
+            DB::raw("DATE_FORMAT(days,'%Y')  as period"),
+            DB::raw('count(*) as total')])
+            ->where('store_id', $store_id)
+            ->where('chain_id', $chain_id)
+            ->groupBy("period")
+            ->get();
+        $total = StatisticOrder::count();
+        $data = [];
+        $data['days'] = $rs;
+        $data['months'] = $month;
+        $data['years'] = $year;
+        $data['total'] = $total;
+        return $data;
+    }
+
+
+    /**
+     * ???????
+     *
+     * @param $chain_id
+     * @param string $from
+     * @param string $to
+     * @return array
+     */
+    public static function statisticsStockByChain($chain_id, $from = '', $to = ''){
+
+
+        $rs = Product::select(['product_name', 'product_quantity', 'warn_quantity'])
+            ->where(['chain_id' => $chain_id])
+            ->whereDate('created_at', '>=', $from)
+            ->whereDate('created_at', '<=', $to)->get()->toArray();
+
+
+        $data = [
+            'product_quantity' => [],
+            'warn_quantity' => [],
+
+        ];
+        $label = [];
+        foreach ($rs as $k => $v) {
+
+            $label[] = $v['product_name'];
+            $data['product_quantity'][] = $v['product_quantity'];
+            $data['warn_quantity'][] = $v['warn_quantity'];
+
+        }
+        return ['label' => $label, 'data' => $data];
+
+    }
+
+    /**
+     * ??between and ??
+     *
+     * @param $from
+     * @param $to
+     * @return array
+     */
+    private static function buildBetween($from, $to){
+
+
+        $from = strtotime($from) ? $from : Carbon::now()->subDays(15)->toDateString();
+        $to = strtotime($to) ? $to : Carbon::now()->toDateString();
+
+
+        return [$from, $to];
+    }
+
+
+    /**
+     *Product Quantity ????
+     *
+     * @param $store_id
+     * @param $chain_id
+     * @param $start 2020-09-01
+     * @param $end 2020-09-02
+     * @return array
+     */
+    public static function staticsProductQuantity($store_id, $chain_id, $start, $end){
+
+        $result = ["year" => [], "month" => [], "days" => [], "total" => 0];
+
+        $where["store_id"] = $store_id;
+        $where["chain_id"] = $chain_id;
+        $result["total"] = StatisticProduct::where($where)->sum("sales");
+
+
+        //year
+        $result["year"] = StatisticProduct::select([
+            DB::raw('DATE_FORMAT(days,"%Y") period'),
+            DB::raw('sum(sales) total')])
+            ->where($where)
+            ->groupBy("period")->get();
+
+        //month
+        $result["month"] = StatisticProduct::select([
+            DB::raw('DATE_FORMAT(days,"%Y-%m") period'),
+            DB::raw('sum(sales) total')])
+            ->where($where)
+            //->whereBetween('days', self::buildBetween($start, $end))
+            ->groupBy("period")->get();
+
+        //days
+        $result["days"] = StatisticProduct::select([
+            'days as period',
+            DB::raw('sum(sales) as total')])
+            ->where($where)
+            ->whereBetween('days', self::buildBetween($start, $end))
+            ->groupBy('period')->get();
+
+
+        return $result;
+    }
+
+
+    /**
+     * Sale Quantity ?????
+     * @param $store_id
+     * @param $chain_id
+     * @param $start
+     * @param $end
+     * @param $rows
+     * @param   $product_id
+     * @return array
+     */
+    public static function staticsSaleQuantity($store_id, $chain_id, $start, $end, $rows = 20, $product_id = ''){
+        $result = ["year" => [], "month" => [], "days" => [], "total" => 0];
+
+        $where["store_id"] = $store_id;
+        $where["chain_id"] = $chain_id;
+        if ($product_id) {
+            $where['product_id'] = $product_id;
+        }
+        //total sale
+        $result["total"] = StatisticProduct::where($where)->sum("price");
+
+
+        //year
+        $result["year"] = StatisticProduct::select([
+            'product_id',
+            DB::raw('DATE_FORMAT(days,"%Y") period'),
+            DB::raw('sum(price) total')])
+            ->where($where)
+            ->with('product')
+            ->whereBetween('days', self::buildBetween(Carbon::today()->subYear(1)->toDateString(), Carbon::today()->toDateString()))
+            ->groupBy(['product_id', 'period'])->limit($rows)->orderBy('period', 'desc')->orderBy('total', 'desc')->get();
+
+        $start = Carbon::parse($start);
+        //month
+
+        $result["month"] = StatisticProduct::select([
+            'product_id',
+            DB::raw('DATE_FORMAT(days,"%Y-%m") period'),
+            DB::raw('sum(price) total')])
+            ->where($where)->with('product')
+            ->whereBetween('days', self::buildBetween(Carbon::today()->subYear(1)->toDateString(), Carbon::today()->toDateString()))
+            ->groupBy(['product_id', 'period'])->orderBy('period', 'desc')->orderBy('total', 'desc')->limit($rows)->get();
+
+        //days
+        $end = Carbon::parse($end)->toDateString();
+        $result["days"] = StatisticProduct::select([
+            'days as period',
+            'product_id',
+            DB::raw('sum(price) total')])
+            ->where($where)->with('product')
+            ->whereBetween('days', self::buildBetween($start->toDateString(), $end))
+            ->groupBy(['product_id', 'period'])->orderBy('period', 'desc')->orderBy('total', 'desc')->limit($rows)->get();
+
+        return $result;
+    }
+}
