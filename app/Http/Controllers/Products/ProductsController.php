@@ -428,6 +428,55 @@ class ProductsController extends Controller
 
 
     }
+
+    public function addProductReturn(Request $request)
+    {
+        $shop_owner = AuthController::meme();
+
+        $chain_id = $request->input('chain_id');
+        $barcode = $request->input('barcode');
+        $item_return = $request->input('item_return');
+        if(!$item_return) {
+            return response()->json(['code'=>0,'msg'=>'item_return is required']);
+        }
+        $product = Product::where(['shop_id'=>$shop_owner->store_id,'chain_id'=>$chain_id,'product_barcode'=>$barcode])->first();
+        if($product) {
+            if($product->item_return >0) {
+                $product->item_return += (int)$request->input('item_return');
+            }else {
+                $product->item_return = $request->input('item_return');
+            }
+            
+            $product->product_quantity = $product->product_quantity -  $request->input('item_return')  ;
+            $product->save();
+        }
+        $response['code']=1;
+        $response['msg']="";
+        $response['data']=$product;
+        return response()->json($response); 
+    }
+
+    public function getProductsReturn(Request $request)
+    {
+        $shop_owner = AuthController::meme();
+
+        $chain_id = $request->input('chain_id');
+        $supplier_id = $request->input('supplier_id');
+        $barcode = $request->input('barcode');
+        $products = Product::where(['shop_id'=>$shop_owner->store_id])
+        ->where('item_return','>',0)
+        ->when($chain_id != '', function ($q) use ($chain_id) 
+        {$q->where('chain_id',$chain_id);})
+        ->when($supplier_id != '', function ($q) use ($supplier_id) 
+        {$q->where('supplier_id',$supplier_id);})
+        ->when($barcode != '', function ($q) use ($barcode) 
+        {$q->where('product_barcode','like','%'.$barcode.'%');})->get();
+        
+        $response['code']=1;
+        $response['msg']="";
+        $response['data']=$products;
+        return response()->json($response); 
+    }
 }
 
 

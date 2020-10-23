@@ -192,17 +192,19 @@ $router->get('/gix2',"ExampleController@order");
             //tested
             $router->group(['prefix' => 'Product'], function () use ($router) {
                 $router->post('/', ['uses' => 'Products\ProductsController@addProduct']);
+                $router->post('/return', ['uses' => 'Products\ProductsController@addProductReturn']);
                 $router->post('/upload', ['uses' => 'Products\ProductsController@uploadProducts']);
-		$router->delete('/DeleteLabel', ['uses' => 'Products\ProductsController@quickPrintDelete']);//chineese team
+		        $router->delete('/DeleteLabel', ['uses' => 'Products\ProductsController@quickPrintDelete']);//chineese team
 
                 $router->post('/bat', ['uses' => 'Products\ProductsController@batchAddProduct']);//chineese team
                 $router->post('/update', ['uses' => 'Products\ProductsController@updateProduct']);
-		$router->get('/List2', ['uses' => 'Products\GetProductsController@chainProductList2']);
+		        $router->get('/List2', ['uses' => 'Products\GetProductsController@chainProductList2']);
                 $router->get('/List1', ['uses' => 'Products\GetProductsController@chainProductList']);
-		$router->get('/List', ['uses' => 'Products\GetProductsController@chainProductList1']);
-		$router->get('/all/{id}', ['uses' => 'Products\GetProductsController@getProductById']);
-		$router->get('/all1', ['uses' => 'Products\GetProductsController@shopProductList1']);
+		        $router->get('/List', ['uses' => 'Products\GetProductsController@chainProductList1']);
+		        $router->get('/all/{id}', ['uses' => 'Products\GetProductsController@getProductById']);
+		        $router->get('/all1', ['uses' => 'Products\GetProductsController@shopProductList1']);
                 $router->get('/all', ['uses' => 'Products\GetProductsController@shopProductList']);
+                $router->get('/return', ['uses' => 'Products\ProductsController@getProductsReturn']);
                 $router->get('/', ['uses' => 'Products\GetProductsController@getProduct']);
                 $router->get('/Barcode', ['uses' => 'Products\GetProductsController@generateBarcode']);
                 $router->delete('/', ['uses' => 'Products\ProductsController@deleteProduct']); 
@@ -210,7 +212,7 @@ $router->get('/gix2',"ExampleController@order");
                 $router->delete('/', ['uses' => 'Products\ProductsController@deleteProduct']);
                 $router->get('/{id}', ['uses' => 'Products\ProductsController@getProduct']);
                 $router->post('/label', ['uses' => 'Products\GetProductsController@getLabels']);
-		$router->post('/labels/label1', ['uses' => 'Products\GetProductsController@getLabels1']);
+		        $router->post('/labels/label1', ['uses' => 'Products\GetProductsController@getLabels1']);
 
                 $router->delete('/deleteLabels', ['uses' => 'Products\GetProductsController@deleteLabels']);
             });
@@ -309,7 +311,7 @@ $router->get('/gix2',"ExampleController@order");
         $router->post('/', ['uses' => 'Admin\CategoriesController@addCategory']);
         $router->post('/assign', ['uses' => 'Admin\CategoriesController@addCategoriesToShop']);
         $router->get('/shop', ['uses' => 'Admin\CategoriesController@getCategoriesByShop']);
-	$router->delete('/shop/remove/{id}', ['uses' => 'Admin\CategoriesController@removeCategoryFromShop']);
+	    $router->delete('/shop/remove/{id}', ['uses' => 'Admin\CategoriesController@removeCategoryFromShop']);
         
     });
 });
