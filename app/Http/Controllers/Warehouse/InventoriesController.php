@@ -60,7 +60,7 @@ return response()->json(['code'=>0,'msg'=>'batch number already exists']);
 
 		$inventory_status = 'pending';
             }
-            $quantity =isset($inv_product['arrived_quantity'])? $request->input($inv_product['arrived_quantity']):0;
+            $quantity =isset($inv_product['verified_quantity'])? $request->input($inv_product['verified_quantity']):0;
             //$value2 =$request->has('value2')? $request->input('value2'):0;
             $purchaseProduct =PurchaseProduct::where('product_barcode', $inv_product["product_barcode"])->first();
             // PurchaseProduct::find($inv_product["id"]);
@@ -105,9 +105,12 @@ return response()->json(['code'=>0,'msg'=>'batch number already exists']);
                 $inv_prod = DB::table('inventory_product')->insert(
                     [ 'inventory_id' => $inventory->id,
                       'product_id' => $product_id,
+
                       'arrived_quantity' =>  isset($inv_product['arrived_quantity'])?$inv_product['arrived_quantity']:0,
+                      'verified_quantity' =>  isset($inv_product['verified_quantity'])?$inv_product['verified_quantity']:0,
+                      'unverified_quantity' =>  isset($inv_product['arrived_quantity'])?$inv_product['arrived_quantity'] -$inv_product['verified_quantity'] :0,
                       'total_quantity' =>  isset($inv_product['product_quantity'])? $inv_product['product_quantity']:0,
-		      'product_status'=>   isset($inv_product['product_status']) ? $inv_product['product_status']:2,
+		              'product_status'=>   isset($inv_product['product_status']) ? $inv_product['product_status']:2,
                       'created_at' =>  Carbon::now(),'updated_at' =>  Carbon::now()]);
                 // if( $inv_product['quantity'] < $purchaseProduct->product_quantity)
                 // {
@@ -115,12 +118,14 @@ return response()->json(['code'=>0,'msg'=>'batch number already exists']);
                 // }
             }
             else {
-		 $product->product_quantity += $inv_product['arrived_quantity'];
+		 $product->product_quantity += $inv_product['verified_quantity'];
                 $product->save();
                 $inv_prod = DB::table('inventory_product')->insert(
                     [ 'inventory_id' => $inventory->id,
                       'product_id' => $product->id,
                       'arrived_quantity' =>  isset($inv_product['arrived_quantity'])?$inv_product['arrived_quantity']:0,
+                      'verified_quantity' =>  isset($inv_product['verified_quantity'])?$inv_product['verified_quantity']:0,
+                      'unverified_quantity' =>  isset($inv_product['arrived_quantity'])?$inv_product['arrived_quantity'] -$inv_product['verified_quantity'] :0,
                       'total_quantity' =>  isset($inv_product['product_quantity'])? $inv_product['product_quantity']:0,
 		      'product_status'=>   $inv_product['product_status'],
                       'created_at' =>  Carbon::now(),'updated_at' =>  Carbon::now()]);
@@ -289,14 +294,19 @@ return response()->json(['code'=>0,'msg'=>'batch number already exists']);
             $inv_prod = DB::table('inventory_product')->where(['inventory_id'=> $id, 'product_id'=> $prod_id])->first();
 	//var_dump($inv_prod);
             $updated_qt=$product['added_quantity'];
-	    
+            $verified_quantity = $product['verified_quantity'];
+            $unverified_quantity =$product['added_quantity']- $product['verified_quantity'];
             DB::table('inventory_product')->where(['inventory_id'=> $id, 'product_id'=> $prod_id])
-            ->update(['arrived_quantity' => $updated_qt,'product_status'=>$product['product_status']]);
+            ->update(['arrived_quantity' => $updated_qt,
+            'product_status'=>$product['product_status'],
+            'verified_quantity'=>$verified_quantity,
+            'unverified_quantity'=>$unverified_quantity]);
+
 	    if($product['product_status']==2) {
 		$inventory_status = 'pending';
             }
             $prod_qt=DB::table('products')->where(['id'=> $prod_id])->value('product_quantity');
-            DB::table('products')->where(['id'=> $prod_id])->update(['product_quantity' =>$product['added_quantity']]);
+            DB::table('products')->where(['id'=> $prod_id])->update(['product_quantity' =>$product['verified_quantity']]);
           
            // if($updated_qt < $inv_prod->total_quantity)
            // {
@@ -366,6 +376,7 @@ return response()->json(['code'=>0,'msg'=>'batch number already exists']);
         }
     }
 
+  
     
 
 
