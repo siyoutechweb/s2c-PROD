@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseProduct;
 use App\Models\ShopFund;
+use App\Models\Supplier;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -56,8 +57,19 @@ class FundsController extends Controller {
         if(!($shop_owner->role_id==1 || $shop_owner->role_id==4)) {
             return response()->json(['code'=>0,'msg'=>'unsufficient permissions']);
         }
+        $chain_id = $request->input('chain_id');
+        if(!$chain_id) {
+            $chain_id = "";
+        }
+
         if($shop_owner->role_id==1 ) {
-            $data = DB::table('shop_supplier_payment_methods')->where('store_id',null)->orWhere('store_id',$shop_owner->shop()->value('id'))->get(); 
+            $data = DB::table('shop_supplier_payment_methods')
+            ->where('store_id',null)
+            ->orWhere('store_id',$shop_owner->shop()->value('id'))
+            ->when($chain_id != '', function ($query) use ($chain_id) {
+                $query->where('chain_id', $chain_id);
+            })
+            ->get(); 
         }
          if($shop_owner->role_id==4 ) {
             $data = DB::table('shop_supplier_payment_methods')->get(); 
@@ -70,13 +82,13 @@ class FundsController extends Controller {
     }
     public function editPaymentMethod(Request $request,$id)
     {
-        $shop_owner= AuthController::me();
+        $shop_owner= AuthController::meme();
         //echo $shop_owner;
         if(!($shop_owner->role_id==1 || $shop_owner->role_id==4)) {
             return response()->json(['code'=>0,'msg'=>'unsufficient permissions']);
         }
         if($shop_owner->role_id==1) {
-            $store_id = $shop_owner->shop()->value('id');
+            $store_id = $shop_owner->store_id;
         }else {
             $store_id = null;
         }
@@ -113,10 +125,16 @@ else {
         if(!($shop_owner->role_id==1 || $shop_owner->role_id==4)) {
             return response()->json(['code'=>0,'msg'=>'unsufficient permissions']);
         }
-        DB::table('shop_supplier_payment_methods')->where('id', $id)->delete();
+        if(DB::table('shop_supplier_payment_methods')->where('id', $id)->delete()) {
+            $response['code']=1;
+            $response['msg']='payment method successfully deleted';
+	    return response()->json($response);
 
-        $response['code']=1;
-        $response['msg']='payment method successfully deleted';
+
+        }
+
+        $response['code']=0;
+        $response['msg']='error while deleting';
         
         return response()->json($response);
     }
@@ -173,7 +191,7 @@ else {
         //echo $finish_date;
         $status='not paid';
         if ($request->hasFile('fund_image')) {
-            $path = $request->file('fund_image')->store('funds', 'google');
+            $path = $request->file('fund_image')->store('funds', 'public');
             $fileUrl = Storage::url($path);
             $img_url = $fileUrl;
             $img_name = basename($path);
@@ -206,10 +224,23 @@ else {
         if(!($shop_owner->role_id==1 || $shop_owner->role_id==4)) {
             return response()->json(['code'=>0,'msg'=>'unsufficient permissions']);
         }
-        $data = DB::table('funds')->where('id', $id)->first();
+        $finish_date = Carbon::today();
+        $finish_date = $finish_date->format('Y-m-d');
+        DB::table('funds')
+        ->where('finish_date', $finish_date)  // find your user by their email
+         ->update(array('status' => 'paid'));  // update the record in the DB
 
-        $response['code']=1;
+        $data = DB::table('funds')->where('id', $id)->first();
+        if(!$data) {
+            $response['code']=0;
+            $response['msg'] = 'fail';
+        $response['data'] = [];
+        return response()->json($response);
         
+        }
+	$data->supplier = Supplier::find($data->supplier_id);
+        $response['code']=1;
+        $response['msg'] = 'success';
         $response['data'] = $data;
         
         return response()->json($response);
@@ -247,6 +278,12 @@ else {
             $finish_date = '';
         }
         $chains_id=$shop_owner->shop->chains()->pluck('id');
+	$finish_date = Carbon::today();
+    $finish_date = $finish_date->format('Y-m-d');
+DB::table('funds')
+        ->where('finish_date', $finish_date)  // find your user by their email
+         ->update(array('status' => 'paid'));  // update the record in the DB
+
         $response= ShopFund::whereIn('chain_id',$chains_id)
         ->when($chain_id != '', function ($query) use ($chain_id) {
             $query->where('chain_id',$chain_id);})
@@ -299,17 +336,22 @@ else {
         //echo $finish_date;
         $status=$request->input('status');
         if ($request->hasFile('fund_image')) {
-            $path = $request->file('fund_image')->store('funds', 'google');
+            $path = $request->file('fund_image')->store('funds', 'public');
             $fileUrl = Storage::url($path);
             $img_url = $fileUrl;
             $img_name = basename($path);
 
         }else {
+            $shopFund=ShopFund::where('id',$id)->first();
+            if($shopFund) {
+                $img_url = $shopFund->img_url;
+                $img_name= $shopFund->img_name;
+            }
            
         }
 	$fund =  DB::table('funds')->where('id', $id)->first();
 	if(!$fund) {
-	$response['code']=0;
+	    $response['code']=0;
         $response['msg']='Fund not found';
 	}else{
         DB::table('funds')
@@ -353,13 +395,19 @@ else {
         if(!($shop_owner->role_id==1)) {
             return response()->json(['code'=>0,'msg'=>'unsufficient permissions']);
         }
+        $chains_id=$shop_owner->shop->chains()->pluck('id');
+        $finish_date = Carbon::today();
+        $finish_date = $finish_date->format('Y-m-d');
+        DB::table('funds')
+        ->where('finish_date', $finish_date)  // find your user by their email
+         ->update(array('status' => 'paid'));  // update the record in the DB
         $store_id = $shop_owner->shop()->value('id');
         $chain_id = $request->input('chain_id');
         $supplier_id = $request->input('supplier_id');
         //$keyword = $request->input('supplier_id');
-        $keyWord = $request->input('keyword');
+        $keyWord = $request->input('supplier_name');
         $created_at = $request->input('created_at');
-        $payment_date = $request->input('payment_date');
+        $payment_date = $request->input('finish_date');
         $status = $request->input('status');
         $payment_method = $request->input('payment_method');
         if(!$chain_id) {
@@ -396,13 +444,91 @@ else {
         ->when($status != '', function ($query) use ($status) {
             $query->where('status',$status);})
         ->when($created_at != '', function ($query) use ($created_at) {
-            $query->whereDate('created_at','=',$created_at);})
+            $query->whereDate('start_date','>=',$created_at);})
         ->when($payment_date != '', function ($query) use ($payment_date) {
             $query->whereDate('finish_date','<=',$payment_date);})
             
             ->orderBy('id','desc')->paginate(20);//->findOrFail();
-            $response ->code = '1';
-            $response ->msg = "success";
+
+            return response()->json($response);
+    }
+	    public function cancelFund(Request $request,$id) 
+    {
+        $user = AuthController::meme();
+        $fund=ShopFund::where('id', $id)->first();
+        if(!$fund) {
+            return response()->json(['code'=>0,'msg'=>'error while operating','data'=>'error while operating']);
+        }
+        $fund->status = 'cancelled';
+        if($fund->save()) {
+            return response()->json(['code'=>1,'msg'=>'fund cancelled successfully','data'=>'fund cancelled successfully']);
+        }
+        return response()->json(['code'=>0,'msg'=>'error while operating','data'=>'error while operating']);
+    }
+
+    public function getFundsForMobile(Request $request) {
+        $shop_owner= AuthController::meme();
+       // echo $shop_owner;
+        if(!($shop_owner->role_id==1)) {
+            return response()->json(['code'=>0,'msg'=>'unsufficient permissions']);
+        }
+        $chains_id=$shop_owner->shop->chains()->pluck('id');
+        $finish_date = Carbon::today();
+        $finish_date = $finish_date->format('Y-m-d');
+        DB::table('funds')
+        ->where('finish_date', $finish_date)  // find your user by their email
+         ->update(array('status' => 'paid'));  // update the record in the DB
+        $store_id = $shop_owner->store_id;
+        $chain_id = $request->input('chain_id');
+        $supplier_id = $request->input('supplier_id');
+        //$keyword = $request->input('supplier_id');
+        $keyWord = $request->input('supplier_name');
+        $created_at = $request->input('created_at');
+        $payment_date = $request->input('finish_date');
+        $status = $request->input('status');
+        $payment_method = $request->input('payment_method');
+        if(!$chain_id) {
+            $chain_id = '';
+        }
+        if(!$supplier_id) {
+            $supplier_id = '';
+        }
+        if(!$created_at) {
+            $created_at = '';
+        }
+        if(!$status) {
+            $status = '';
+        }
+      
+        if(!$payment_method) {
+            $payment_method = '';
+        }
+        if(!$payment_date) {
+            $payment_date = '';
+        }
+        $chains_id=$shop_owner->shop->chains()->pluck('id');
+        $response= ShopFund::with('supplier')->whereHas('supplier',function($q) use ($keyWord)
+        {
+            $q->when($keyWord != '', function ($q) use ($keyWord)
+            { $q->where('suppliers.supplier_name', 'like', '%' . $keyWord . '%');});
+        })->whereIn('chain_id',$chains_id)
+        ->when($chain_id != '', function ($query) use ($chain_id) {
+            $query->where('chain_id',$chain_id);})
+        ->when($payment_method != '', function ($query) use ($payment_method) {
+            $query->where('payment_method_id',$payment_method);})
+        ->when($supplier_id != '', function ($query) use ($supplier_id) {
+            $query->where('supplier_id',$supplier_id);})
+        ->when($status != '', function ($query) use ($status) {
+            $query->where('status',$status);})
+        ->when($created_at != '', function ($query) use ($created_at) {
+            $query->whereDate('start_date','>=',$created_at);})
+        ->when($payment_date != '', function ($query) use ($payment_date) {
+            $query->whereDate('finish_date','<=',$payment_date);})
+            
+            ->orderBy('id','desc')->paginate(20)->toArray();//->findOrFail();
+            $response['code']= '1';
+            $response['msg'] = "success";
+
             return response()->json($response);
     }
    

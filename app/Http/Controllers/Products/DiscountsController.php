@@ -3,22 +3,22 @@
 SIYOU THECH Tunisia
 Author: Habiba Boujmil
 ERROR MSG
-* 1：parameters missing, in data field indicate whuch parameter is missing
-* 2：token expired or forced to logout, take to relogin
-* 3：error while saving
+* 1:parameters missing, in data field indicate whuch parameter is missing
+* 2:token expired or forced to logout, take to relogin
+* 3:error while saving
 */
 use App\Models\Product_discount;
-use Carbon\Carbon;
+
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
-
+use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Discount;
 use Illuminate\Http\Request;
-
+use Exception;
 
 class DiscountsController extends Controller {
 
@@ -48,7 +48,7 @@ class DiscountsController extends Controller {
     */
 
     public function addPromotion(Request $request)
-    {
+    {	$user = AuthController::meme();
         Product::updateDiscountPrice();
         $discount_id = $request->input('discount_id');
         $discount= Discount::find($discount_id);
@@ -71,14 +71,19 @@ class DiscountsController extends Controller {
                     DB::table('product_discount')->where("product_id", $product_id)->update(['product_id'=>$product_id,'discount_value1'=> $value1,
                 'discount_value2'=> $value2,
                 'start_date'=> $start_date,
-                'finish_date'=> $finish_date]);
+                'finish_date'=> $finish_date,
+		        'updated_at'=>Carbon::now(),'store_id'=>$user->store_id]);
                 }
                 else {
                     $product->Discount()->attach($discount, 
                 ['discount_value1'=> $value1,
                 'discount_value2'=> $value2,
                 'start_date'=> $start_date,
-                'finish_date'=> $finish_date]);
+                'finish_date'=> $finish_date,
+                'created_at'=>Carbon::now(),
+                'updated_at'=>Carbon::now(),
+                'store_id'=>$user->store_id
+		]);
                 }
                 
                 $product->discount_price=$discount_price;
@@ -97,14 +102,22 @@ class DiscountsController extends Controller {
                     DB::table('product_discount')->where("product_id", $product_id)->update(['product_id'=>$product_id,'discount_value1'=> $value1,
                 'discount_value2'=> $value2,
                 'start_date'=> $start_date,
-                'finish_date'=> $finish_date]);
+                'finish_date'=> $finish_date,
+                'updated_at'=>Carbon::now(),
+                'store_id'=>$user->store_id
+		]);
                 }
                 else {
                     $product->Discount()->attach($discount, 
                 ['discount_value1'=> $value1,
                 'discount_value2'=> $value2,
                 'start_date'=> $start_date,
-                'finish_date'=> $finish_date]);
+                'finish_date'=> $finish_date,
+                'created_at'=>Carbon::now(),
+                'updated_at'=>Carbon::now(),
+                'store_id'=>$user->store_id
+
+		]);
                 }
                 // $product->discount_price=$discount_price;
                 // $product->save();
@@ -122,14 +135,21 @@ class DiscountsController extends Controller {
                     DB::table('product_discount')->where("product_id", $product_id)->update(['product_id'=>$product_id,'discount_value1'=> $value1,
                 'discount_value2'=> $value2,
                 'start_date'=> $start_date,
-                'finish_date'=> $finish_date]);
+                'finish_date'=> $finish_date,
+                'updated_at'=>Carbon::now(),
+                'store_id'=>$user->store_id
+		]);
                 }
                 else {
                     $product->Discount()->attach($discount, 
                 ['discount_value1'=> $value1,
                 'discount_value2'=> $value2,
                 'start_date'=> $start_date,
-                'finish_date'=> $finish_date]);
+                'finish_date'=> $finish_date,
+                'created_at'=>Carbon::now(),
+                'updated_at'=>Carbon::now(),
+                'store_id'=>$user->store_id
+		]);
                 }
                 $product->discount_price=$discount_price;
                 $product->save();
@@ -146,14 +166,21 @@ class DiscountsController extends Controller {
                     DB::table('product_discount')->where("product_id", $product_id)->update(['product_id'=>$product_id,'discount_value1'=> $value1,
                 'discount_value2'=> $value2,
                 'start_date'=> $start_date,
-                'finish_date'=> $finish_date]);
+                'finish_date'=> $finish_date,
+                'updated_at'=>Carbon::now(),
+                'store_id'=>$user->store_id
+		]);
                 }
                 else {
                     $product->Discount()->attach($discount, 
                 ['discount_value1'=> $value1,
                 'discount_value2'=> $value2,
                 'start_date'=> $start_date,
-                'finish_date'=> $finish_date]);
+                'finish_date'=> $finish_date,
+                'created_at'=>Carbon::now(),
+                'updated_at'=>Carbon::now(),
+                'store_id'=>$user->store_id
+		]);
                 }
                 $product->discount_price=$discount_price;
                 $product->save();
@@ -183,7 +210,8 @@ class DiscountsController extends Controller {
      - Accessible for : ShopOwner / ShopManager
     */
     public function addPromotion2(Request $request)
-    {
+    {$user = AuthController::meme();
+
         $response['code'] = 1;
         $response['msg'] = '';
         try {
@@ -220,6 +248,8 @@ class DiscountsController extends Controller {
                 'start_date' => $data['start_date'],
                 'finish_date' => $data['finish_date'],
                 'discount_id' => $data['discount_id'],
+		        'store_id'=>$user->store_id
+
             ]);
             $product->discount_price = $discount_price;
             $product->save();
@@ -246,14 +276,14 @@ class DiscountsController extends Controller {
         $start_date = $request->input('start_date');
         $end_date = $request->input('end_date');
 	if(!$chain_id) {
-$chain_id = '';}
+        $chain_id = '';}
         if (!$start_date) {
-            //$start_time = Date('Y-m-d 00:00:00', strtotime('0days'));
+           
             $start_date = '';
             
         }
         if (!$end_date) {
-            //$end_time = Date('Y-m-d 23:59:59', time());
+
             $end_date = '';
         }
         
@@ -269,7 +299,7 @@ $chain_id = '';}
                             ->orWhere('product_description', 'like', '%' . $keyWord . '%');})
                             ->whereNotNull('discount_price')
                         ->paginate(20)->toArray();
-                        //var_dump($response["data"][0]);
+ 
                         if(!empty($start_date)) {
                             
                             $response =array_filter($response["data"],function($query) use($start_date) {
@@ -278,7 +308,7 @@ $chain_id = '';}
                                 $v=$query['product_discount']['start_date'];
                                 return $v >= $start_date;
                             });
-			//$response =array_values($response);
+
 
                         }
                         if(!empty($end_date)) {
@@ -289,10 +319,7 @@ $chain_id = '';}
                                 $v=$query['product_discount']['finish_date'];
                                 return $v < $end_date;
                             });
-			//$response =array_values($response);
 
-                        }
-	//$response =array_values($response);
         
                 
         $object['code'] = 1;
@@ -301,17 +328,22 @@ $chain_id = '';}
         
         return response()->json((object)$object);   
     }
-
+    }
     public function getProducts(Request $request)
-    {
+    {   
+        $shop_owner=AuthController::meme();
         Product::updateDiscountPrice();
         $chain_id = $request->input('chain_id');
         $category = $request->input('category_id');
         $barcode = $request->input('barcode');
+        $supplier = $request->input('supplier_id');
         $keyWord = $request->input('keyword');
-        $response=Product::where('chain_id',$chain_id )
+        $response=Product::where('shop_id',$shop_owner->store_id)
+                        ->where('chain_id',$chain_id )
                         ->when($category != '', function ($query) use ($category) {
                         $query->where('category_id',$category);})
+                        ->when( isset($supplier) && $supplier != '', function ($query) use ($supplier) {
+                            $query->where('supplier_id',$supplier);})
                         ->when($barcode != '',  function ($q) use ($barcode)
                         {$q->where('product_barcode',$barcode)->get();})
                         ->when($keyWord != '', function ($q) use ($keyWord)
@@ -324,9 +356,10 @@ $chain_id = '';}
 public function batchAddProductDiscount(Request $request)
     {
        
-        $shop_owner = AuthController::me();
+        $shop_owner = AuthController::meme();
         try {
             $post = $request->post();
+            
             if (!isset($post['store_id'], $post['chain_id'], $post['products'])) {
                 throw new \Exception('Missing parameter');
             }
@@ -341,24 +374,13 @@ public function batchAddProductDiscount(Request $request)
             // $prod=new Product();
             //var_dump($product);
             foreach ($product as $v) {
-                //var_dump($v);
-                // $unit_price=sprintf('%.2f', $v['product_unit_price']);
-                
-                // $tax_rate = isset($v['tax_rate'])?$v['tax_rate']: 0;
-                
-                // $tmp = Product::where('product_barcode',$v['item_barcode'])->first() ;
-                // if($tmp) {
-                //     $qty = $tmp->product_quantity;
-                // }
-                // else {
-                //     $qty = 0;
-                // }
+
                 if (!isset($v['discount_type'], $v['item_barcode'], $v['start_date'], $v['finish_date'], $v['discount_value1'], $v['discount_value2'])) {
                     $response['code'] = 0;
                     throw new \Exception("arguments are required");
                 }
-                $product = Product::where('product_barcode',$v['item_barcode'])->first();
-		$id = $product->id;
+                $product = Product::where('product_barcode',$v['item_barcode'])->where('chain_id',$post['chain_id'])->first();
+		        $id = $product->id;
                 if(!$product){
                     $response['code'] = 0;
                     throw new \Exception('the product is not found');
@@ -387,12 +409,13 @@ public function batchAddProductDiscount(Request $request)
                 $discount = Product_discount::updateOrCreate(['product_id' => $id], [
                     'discount_value1' => $v['discount_value1'],
                     'discount_value2' => $v['discount_value2'],
-		     'product_id' => $id,
+		            'product_id' => $id,
                     'start_date' => $v['start_date'],
                     'finish_date' => $v['finish_date'],
                     'discount_id' => $v['discount_type'],
+                    'store_id'=>$post['store_id']
                 ]);
-		//echo $discount;
+
                 
                 
 
@@ -412,19 +435,19 @@ public function batchAddProductDiscount(Request $request)
 
     }
 public function updatePromotion(Request $request,$id) {
-        $promotion =Product_discount::where('id',$id)->first();
-        if(!$promotion) {
-            return response()->json(["code"=>0,"msg"=>"promotion not found"]);
-        }
+    $discount =Product_discount::where('id',$id)->first();
+    if(!$discount) {
+        return response()->json(["code"=>0,"msg"=>"discount not found"]);
+    }
         else {
             Product::updateDiscountPrice();
-            $promotion->start_date = $request->input('start_date');
-            $promotion->finish_date = $request->input('finish_date');
-            $promotion->save();
+            $discount->start_date = $request->input('start_date');
+            $discount->finish_date = $request->input('finish_date');
+            $discount->save();
             Product::updateDiscountPrice();
             return response()->json(["code"=>1,"msg"=>"promotion updated successfully"]);
         }
-    }
+    }    
     public function cancelPromotion(Request $request,$id) {
         $promotion =Product_discount::where('id',$id)->first();
         if(!$promotion) {
@@ -432,9 +455,42 @@ public function updatePromotion(Request $request,$id) {
         }
         else {
             Product::updateDiscountPrice();
+            $prod=Product::find($promotion->product_id);
+	    $discount_price=$prod->discount_price;
+	   
+            $prod->unit_price=$prod->unit_price+$discount_price;
+            $prod->discount_price=null;
+            $prod->save();
             $promotion->delete();
             return response()->json(["code"=>1,"msg"=>"promotion deleted successfully"]);
         }
+    }
+    public function cancelPromotions(Request $request) {
+        $user = AuthController::meme();
+        if(!$request->filled('discount_ids')) {
+            return response()->json(['code'=>0,'msg'=>'missing argument discount_ids']);
+        }
+        $string = $request->input('discount_ids');
+        $discount_ids = array_values(preg_split("/\,/", $string));
+        foreach($discount_ids as $id) {
+            $promotion =Product_discount::where('id',$id)->first();
+            if(!$promotion) {
+                return response()->json(["code"=>0,"msg"=>"promotion  with id ".$id ."not found"]);
+            }
+            else {
+                Product::updateDiscountPrice();
+                $prod=Product::find($promotion->product_id);
+                $discount_price=$prod->discount_price;
+                
+                $prod->unit_price=$prod->unit_price+$discount_price;
+                $prod->discount_price=null;
+                $prod->save();
+                $promotion->delete();
+                
+            }
+        }
+        return response()->json(["code"=>1,"msg"=>"promotions deleted successfully"]);
+        
     }
     public function getDiscountById(Request $request,$id) {
         $discount =Product_discount::where('id',$id)->first();
@@ -464,21 +520,23 @@ public function updatePromotion(Request $request,$id) {
         $start_date = $request->input('start_date');
         $end_date = $request->input('end_date');
         if (!$start_date) {
-            //$start_time = Date('Y-m-d 00:00:00', strtotime('0days'));
+
             $start_date = '';
             
         }
         if (!$end_date) {
-            //$end_time = Date('Y-m-d 23:59:59', time());
+
             $end_date = '';
         }
         if (!$discount_id) {
-            //$end_time = Date('Y-m-d 23:59:59', time());
+
             $discount_id = '';
         }
 	
         $userChain = $shop_owner->chain_id;
+        $products_id = DB::table('product_discount')->where('store_id',$shop_owner->store_id)->pluck('product_id');
         $response=Product::with('Discount','ProductDiscount')
+         ->whereIn('id',$products_id)
          ->where('shop_id',$shop_owner->store_id)
          ->when(isset($userChain), function ($query) use ($userChain) {
             $query->where('chain_id',$userChain);})
@@ -493,18 +551,24 @@ public function updatePromotion(Request $request,$id) {
                             ->orWhere('product_description', 'like', '%' . $keyWord . '%');})
                             ->whereNotNull('discount_price')
                       ->get()->toArray();
-                        //var_dump($response["data"][0]);
+                        
+                      $response = array_filter($response,function($query) use($discount_id) {
+                        //echo $query['product_discount']['start_date'];
+                        if(isset($query['product_discount']))
+                        $v=$query['product_discount']['discount_id'];
+                        return $v != 2;
+                    });
                         if(!empty($start_date)) {
                             
                             $response =array_filter($response,function($query) use($start_date) {
-                                //echo gettype($query['product_discount']);
+                               
                                 if(isset($query['product_discount']))
                                 $v=$query['product_discount']['start_date'];
                                 return $v > $start_date;
                             });
                         }
                         if(!empty($end_date)) {
-                            //var_dump($response[0]);
+                          
                             $response = array_filter($response,function($query) use($end_date) {
                                 //echo $query['product_discount']['start_date'];
                                 if(isset($query['product_discount']))
@@ -512,7 +576,7 @@ public function updatePromotion(Request $request,$id) {
                                 return $v < $end_date;
                             });
                         } if(!empty($discount_id)) {
-                            //var_dump($response[0]);
+                     
                             $response = array_filter($response,function($query) use($discount_id) {
                                 //echo $query['product_discount']['start_date'];
                                 if(isset($query['product_discount']))
@@ -530,6 +594,7 @@ public function updatePromotion(Request $request,$id) {
         return response()->json((object)$object);   
     }
 public function getDiscountProductsNByM(Request $request) {
+	try {
         $shop_owner=AuthController::meme();
         Product::updateDiscountPrice();
         $chain_id = $request->input('chain_id');
@@ -543,18 +608,18 @@ public function getDiscountProductsNByM(Request $request) {
         $start_date = $request->input('start_date');
         $end_date = $request->input('end_date');
         if (!$start_date) {
-            //$start_time = Date('Y-m-d 00:00:00', strtotime('0days'));
+
             $start_date = '';
             
         }
         if (!$end_date) {
-            //$end_time = Date('Y-m-d 23:59:59', time());
+
             $end_date = '';
         }
-        //echo $shop_owner->store_id;
+
         $userChain = $shop_owner->chain_id;
-        $response=Product::with('Discount','ProductDiscount')
-         ->where('shop_id',$shop_owner->store_id)
+	    $products_id = DB::table('product_discount')->where('store_id',$shop_owner->store_id)->pluck('product_id');
+        $response=Product::with('Discount','ProductDiscount')->whereIn('id',$products_id)->where('shop_id',$shop_owner->store_id)
          ->when(isset($userChain), function ($query) use ($userChain) {
             $query->where('chain_id',$userChain);})
          ->when($chain_id != '', function ($query) use ($chain_id) {
@@ -604,14 +669,21 @@ public function getDiscountProductsNByM(Request $request) {
                 
         $object['code'] = 1;
         $object['msg'] = 'success';
-        $object['data'] =$response;
+        $object['data'] =$response;return response()->json((object)$object); }
+catch (Exception $e) {
+            return response()->json([
+                'code' => 0, 'msg' => $e->getMessage().$e->getLine().$e->getFile()
+            ]);
+
+        }
+
         
-        return response()->json((object)$object); 
+        
     }
     public function getDiscountHistory(Request $request) 
     {
         $shop_owner=AuthController::meme();
-	//echo $shop_owner;
+
         Product::updateDiscountPrice();
         $chain_id = $request->input('chain_id');
         
@@ -624,19 +696,21 @@ public function getDiscountProductsNByM(Request $request) {
         $start_date = $request->input('start_date');
         $end_date = $request->input('end_date');
         if (!$start_date) {
-            //$start_time = Date('Y-m-d 00:00:00', strtotime('0days'));
+
             $start_date = '';
             
         }
         if (!$end_date) {
-            //$end_time = Date('Y-m-d 23:59:59', time());
+
             $end_date = '';
         }
         $date = Carbon::now()->format('Y-m-d');
         $today = Carbon::today();
         //echo $date;
         $userChain = $shop_owner->chain_id;
+        $products_id = DB::table('product_discount')->where('store_id',$shop_owner->store_id)->pluck('product_id');
         $response=Product::with('Discount','ProductDiscount')
+         ->whereIn('id',$products_id)
          ->where('shop_id',$shop_owner->store_id)
          ->when(isset($userChain), function ($query) use ($userChain) {
             $query->where('chain_id',$userChain);})
@@ -651,14 +725,119 @@ public function getDiscountProductsNByM(Request $request) {
             ->where('product_name', 'like', '%' . $keyWord . '%')
             ->orWhere('product_description', 'like', '%' . $keyWord . '%');})
          ->get()->toArray();
-                        //var_dump($response["data"][0]);
+
+          if(count($response)>0){
+            $response = array_filter($response,function($query) use($date) {
+
+                if(isset($query['product_discount'])) {
+                    //echo $date;
+                    $v=$query['product_discount']['discount_id'];
+                    //echo $v;
+                    return $v !=2;
+                }
+                
+            });
+                        if(!empty($start_date)) {
+                            
+                            $response =array_filter($response,function($query) use($start_date) {
+
+                                if(isset($query['product_discount'])) {
+                                $v=$query['product_discount']['start_date'];
+                                return $v >= $start_date;}
+                            });
+                        }
+                        if(!empty($end_date)) {
+                            //var_dump($response[0]);
+                            $response = array_filter($response,function($query) use($end_date) {
+
+                                if(isset($query['product_discount'])) {
+                                $v=$query['product_discount']['finish_date'];
+                                return $v <= $end_date;}
+                            });
+                        } if(!empty($discount_id)) {
+                            //var_dump($response[0]);
+                            $response = array_filter($response,function($query) use($discount_id) {
+                               
+                                if(isset($query['product_discount'])){
+                                    $v=$query['product_discount']['discount_id'];
+                                     return $v == $discount_id;
+                                }
+                                
+                            });
+                        }
+                        $response = array_filter($response,function($query) use($date) {
+                          
+                            if(isset($query['product_discount'])) {
+                            
+                                $v=$query['product_discount']['finish_date'];
+                             
+                                return $v < $date;
+                            }
+                            
+                        });
+                        $response = array_values($response);}
+        
+                
+        $object['code'] = 1;
+        $object['msg'] = 'success';
+        $object['data'] =$response;
+        
+        return response()->json((object)$object); 
+    }
+    public function getpromotionHistory(Request $request) 
+    {
+        $shop_owner=AuthController::meme();
+
+        Product::updateDiscountPrice();
+        $chain_id = $request->input('chain_id');
+        
+        $category = $request->input('category_id');
+        
+        $barcode = $request->input('barcode');
+        $discount_id = 2;
+      
+        $keyWord = $request->input('keyword');
+        $start_date = $request->input('start_date');
+        $end_date = $request->input('end_date');
+        if (!$start_date) {
+
+            $start_date = '';
+            
+        }
+        if (!$end_date) {
+   
+            $end_date = '';
+        }
+        $date = Carbon::now()->format('Y-m-d');
+        $today = Carbon::today();
+        //echo $date;
+        $userChain = $shop_owner->chain_id;
+        $products_id = DB::table('product_discount')->where('store_id',$shop_owner->store_id)->pluck('product_id');
+        $response=Product::with('Discount','ProductDiscount')
+         ->whereIn('id',$products_id)
+         ->where('shop_id',$shop_owner->store_id)
+         ->when(isset($userChain), function ($query) use ($userChain) {
+            $query->where('chain_id',$userChain);})
+         ->when($chain_id != '', function ($query) use ($chain_id) {
+            $query->where('chain_id',$chain_id);})
+                        
+         ->when($category != '', function ($query) use ($category) {
+            $query->where('category_id',$category);})
+         ->when($barcode != '',  function ($q) use ($barcode)
+            {$q->where('product_barcode',$barcode)->get();})
+         ->when($keyWord != '', function ($q) use ($keyWord){ $q
+            ->where('product_name', 'like', '%' . $keyWord . '%')
+            ->orWhere('product_description', 'like', '%' . $keyWord . '%');})
+         ->get()->toArray();
+	
+          if(count($response)>0){
                         if(!empty($start_date)) {
                             
                             $response =array_filter($response,function($query) use($start_date) {
                                 //echo gettype($query['product_discount']);
                                 if(isset($query['product_discount'])) {
                                 $v=$query['product_discount']['start_date'];
-                                return $v > $start_date;}
+                                return $v >= $start_date;}
                             });
                         }
                         if(!empty($end_date)) {
@@ -667,7 +846,7 @@ public function getDiscountProductsNByM(Request $request) {
                                 //echo $query['product_discount']['start_date'];
                                 if(isset($query['product_discount'])) {
                                 $v=$query['product_discount']['finish_date'];
-                                return $v < $end_date;}
+                                return $v <= $end_date;}
                             });
                         } if(!empty($discount_id)) {
                             //var_dump($response[0]);
@@ -691,7 +870,7 @@ public function getDiscountProductsNByM(Request $request) {
                             }
                             
                         });
-                        $response = array_values($response);
+                        $response = array_values($response);}
         
                 
         $object['code'] = 1;

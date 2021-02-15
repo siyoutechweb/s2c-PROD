@@ -32,8 +32,8 @@ class LogsController extends Controller
     public function add(Request $request)
     {
         try {
-            $data = $request->only(['chain_id', 'op_cashier_name', 'op_description', 'addtime']);
-            if (!isset($data['chain_id'], $data['addtime'], $data['op_cashier_name'], $data['op_description'])) {
+            $data = $request->only(['chain_id', 'op_cashier_name', 'op_description', 'addtime', 'cash_number']);
+            if (!isset($data['chain_id'], $data['addtime'], $data['op_cashier_name'], $data['op_description']) || !is_numeric($data['cash_number'])) {
                 return response()->json(['msg' => 'Missing parameter'], 500);
             }
             $shop_owner = AuthController::me();
@@ -45,6 +45,7 @@ class LogsController extends Controller
             $Operatorlog->op_description = $data['op_description'];
             $Operatorlog->shop_owner_id = $shop_owner->id;
             $Operatorlog->addtime = $data['addtime'];
+            $Operatorlog->cash_number = $data['cash_number'];
 
             if ($Operatorlog->save()) {
                 $response['code'] = 0;
@@ -59,7 +60,6 @@ class LogsController extends Controller
             $response['data'] = $e->getMessage();
             return response()->json($response, 500);
         }
-
 
     }
 
@@ -83,10 +83,10 @@ class LogsController extends Controller
             $rs = Operatorlog::with(['shop'])
                 ->where(['chain_id' => $chain_id])
                 ->when($start_date != '', function ($query) use ($start_date) {
-                    $query->whereDate('addtime', '>=', $start_date);
+                    $query->where('created_at', '>=', $start_date);
                 })
                 ->when($finish_date != '', function ($query) use ($finish_date) {
-                    $query->whereDate('addtime', '<=', $finish_date);
+                    $query->where('created_at', '<=', $finish_date);
                 })
                 ->paginate($rows);
             return response()->json(collect($rs)->toArray());

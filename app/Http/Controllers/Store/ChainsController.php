@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Shop;
+use App\Models\License;
 use App\Models\Chain;
 use App\Models\Warehouse;
 use Illuminate\Http\File;
@@ -34,7 +35,15 @@ class ChainsController extends Controller {
     */
     public function addchain(Request $request)
     {
-        $shop_owner = AuthController::me();
+        $shop_owner = AuthController::meme();
+        $licence = License::where('shop_owner_id',$shop_owner->id)->first();
+        if(!$licence) {
+            return response()->json(['code'=>0,'msg'=>'you do not have license']);
+        }
+        $chains=Chain::where('store_id',$shop_owner->store_id)->count();
+        if($chains>=$licence->max_chains) {
+            return response()->json(['code'=>0,'msg'=>'reached maximum chains allowed for this account']);
+        }
         $store_id=$shop_owner->shop()->value('id');
         $chain= new chain();
         $chain->chain_name = $request->input('chain_name');
@@ -107,13 +116,17 @@ class ChainsController extends Controller {
         $shop_owner = AuthController::me();
        $store_id=$request->query('store_id');
      $store= Shop::find($store_id);
-         $chainList = $store->chains()->get()
+     if($shop_owner->role_id==1) {
+         $chainList = $store->chains()->get();}
+if ($shop_owner->role_id ==2 || $shop_owner->role_id ==3) {
+        $chainList = Chain::where('id',$shop_owner->chain_id)->get();
+    }
         //  ->map(function($query) { 
         //      echo $query;
         //      $query=$query->toArray();
         //      $query=array_map('strval', $query);
         //      return  $query; })
-        ;
+        
         // echo gettype($chainList);
        foreach($chainList as $key => $value) {
        
@@ -167,10 +180,12 @@ class ChainsController extends Controller {
 
     public function chainsWithManager(Request $request)
     {
-        $shop_owner = AuthController::me();
+        $shop_owner = AuthController::meme();
         $store_id=$request->input('store_id');
+	$userchain =$shop_owner->chain_id;
         $store= shop::find($store_id);
-        $chainList = $store->chains()->with('Manager')->get();
+        $chainList = Chain::where('store_id',$store_id)->with('Manager')->with('Manager2')->with('Manager3')->when($userchain != '', function ($query) use ($userchain) {
+                $query->where('id',$userchain);})->get();
 
         $response = array();
         $response['msg']="";
@@ -182,8 +197,12 @@ class ChainsController extends Controller {
 public function getChainById(Request $request,$id) {
         $chain = Chain::find($id);
         if(!$chain) {
+        
             return response()->json(['code'=>0,'msg'=>'chain with these credentials not found']);
         }
+	    $chain->manager=User::find($chain->manager_id);
+            $chain->manager2=User::find($chain->manager2_id);
+            $chain->manager3=User::find($chain->manager3_id);
         return response()->json(['code'=>1,'msg'=>'success','data'=>$chain]);
     }
     public function updateChain(Request $request,$id) {

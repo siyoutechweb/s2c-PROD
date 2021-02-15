@@ -19,7 +19,10 @@ class QuickPrint extends Model
     // Relationships
 
     public function products() {
-        return $this->hasOne(Product::class, 'product_barcode','product_barcode')->select(['id','product_name','product_barcode','unit_price','cost_price','discount_price','member_price'])->with('ProductDiscount');
+        return $this->hasMany(Product::class, 'product_barcode','product_barcode')->select(['id','product_name','product_barcode','unit_price','cost_price','discount_price','member_price','chain_id'])->with('ProductDiscount');
+    }
+    public function products1() {
+        return $this->hasMany(Product::class, 'product_barcode','product_barcode')->select(['id','product_name','product_barcode','unit_price','cost_price','discount_price','member_price','chain_id'])->with('ProductDiscount');
     }
 
     public function chains() {

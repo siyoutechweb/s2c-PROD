@@ -8,7 +8,7 @@ class Product_discount extends Model {
     protected $table='product_discount';
     protected $fillable = [
 
-        'discount_id','product_id','discount_value1','discount_value2','start_date','finish_date'
+        'discount_id','product_id','discount_value1','discount_value2','start_date','finish_date','store_id'
     ];
 
     protected $dates = [

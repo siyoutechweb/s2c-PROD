@@ -29,21 +29,16 @@ class DashboardsController extends Controller
             $data['year_amount']= order::where('chain_id',$chain)
                                 ->whereYear('created_at', '=', date('Y'))
                                 ->sum('payment_amount');
-            $data['total_order']= order::where('chain_id',$chain)->count();
+            $data['total_order']= order::where('chain_id',$chain)->whereMonth('created_at', '=', date('m'))->whereYear('created_at', '=', date('Y'))->count();
             
         
         }
         else {
-            $data['today_amount'] = order::whereDate('created_at', '=', date('Y-m-d'))
-                                    ->sum('payment_amount');
-            $data['month_amount'] = order::whereMonth('created_at', '=', date('m'))
-                                            ->sum('payment_amount');
-            $data['year_amount']= order::whereYear('created_at', '=', date('Y'))
-                                        ->sum('payment_amount');
-            $data['total_suppliers']= $shop_owner->supplier()->count();
-            $data['total_product']= product::where('shop_owner_id',$shop_owner->id)
-                                        ->count();
-            $data['total_order']= order::count();
+            $data['today_amount'] =0;
+            $data['month_amount'] = 0;
+            $data['year_amount']=0;
+            $data['total_order']= 0;
+
         }
         
         $response = array();
@@ -72,7 +67,7 @@ class DashboardsController extends Controller
         $response = array();
         $response['code']=1;
         $response['msg']='';
-        $response['data']= $data;
+        //$response['data']= $data;
         return response()->json($response);  
     }
      

@@ -20,5 +20,9 @@ class Supplier extends Model {
     {
         return $this->belongsToMany(User::class,'shop_supplier','supplier_id','shop_id')->withTimestamps();
     }
+    public function shopOwner()
+    {
+        return $this->belongsTo(User::class,'shop_owner_id');
+    }
 
 }

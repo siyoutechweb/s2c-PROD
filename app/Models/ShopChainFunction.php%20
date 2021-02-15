@@ -1,0 +1,18 @@
+<?php namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+
+class ShopChainFunction extends Model {
+
+    protected $fillable = ['store_id', 'chain_id', 'no_fiscal_invoice', 'upload_non_fiscal', 'quick_scan_collect', 'excel_copy_multi_chain'];
+
+    protected $dates = [];
+
+    public static $rules = [
+        // Validation rules
+    ];
+
+    // Relationships
+
+}

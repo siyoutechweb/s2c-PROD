@@ -7,14 +7,16 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
-
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
 /*
 SIYOU THECH Tunisia
 Author: Habiba Boujmil
 ERROR MSG
-* 1：parameters missing, in data field indicate whuch parameter is missing
-* 2：token expired or forced to logout, take to relogin
-* 3：error while saving
+* 1ï¼šparameters missing, in data field indicate whuch parameter is missing
+* 2ï¼štoken expired or forced to logout, take to relogin
+* 3ï¼šerror while saving
 * 4: error while deleting
 
 */
@@ -25,6 +27,48 @@ class MembersController extends Controller {
     {
         $this->middleware('auth');
 
+    }
+
+	public function uploadMembers(Request $request) {
+       
+        $shop_owner = AuthController::meme();
+        $store_id = $shop_owner->store_id;
+        
+        if ($request->hasFile('members')) {
+            $path = $request->file('members')->getRealPath();
+            $data = Excel::load($path)->get();
+            if ($data->count()) {
+                foreach ($data as  $value) 
+        {
+           
+            $arr[] = [
+                    'first_name' => $value->first_name, 
+                    'last_name' => $value->last_name,
+                    'gender' => $value->gender,
+                    'card_num' => $value->card_number,
+                    'contact' => $value->contact,
+                    'email' => $value->email,
+                    'points' => $value->points,
+                    'level_id' => $value->level_id,
+                    'store_id' => $store_id,
+                    'expiration_date' => $value->expiration_date,
+                        
+		            'created_at'=>Carbon::now(),
+		            'updated_at'=>Carbon::now()
+                    ];
+                    $member = Member::where('card_num',$value->card_number)->first();
+                    if (!empty($arr) && !$member) { DB::table('members')->insert($arr);}
+        }
+                $response['code'] = 1;
+                $response['msg'] = '';
+                $response['data'] = "data has been saved";
+                return response()->json($response);
+            }
+            $response['code'] = 0;
+            $response['msg'] = '3';
+            $response['data'] = 'error while saving';
+            return response()->json($response);
+        }
     }
 
     /* Add Member API
@@ -38,7 +82,11 @@ class MembersController extends Controller {
         $shop_owner = AuthController::me();
         $store_id=(int) $request->input('store_id');
         $chain_id= $request->input('chain_id');
-        if ($request->filled('first_name','last_name','contact','card_num')) 
+        if($chain_id=="") {$chain_id=null;}
+        if(!$request->filled('level_id')) {
+            return response()->json(['code'=>0,'msg'=>'1','missing params']);
+        }
+        if ($request->filled('first_name','last_name','contact','card_num','level_id')) 
         {
             $member = new member();
             $member->first_name = $request->input('first_name');
@@ -57,7 +105,7 @@ class MembersController extends Controller {
             $member->card_barcode = $request->input('card_barcode');   
             $member->adress = $request->input('adress');    
             $member->store_id= $store_id;
-
+            $member->chain_id= $chain_id;
             if ($member->save()) {
                 $response = array();
                 $response['code']=1;
@@ -89,6 +137,8 @@ class MembersController extends Controller {
         //$store_id = $shop_owner->shop()->value('id');
         //$store_id= $request->input('store_id');
         $store_id = $shop_owner->store_id;
+    //echo $store_id;
+        $rows = $request->input('rows',20);
         $card_num= $request->input('card_num');
         $first_name= $request->input('first_name');
         $last_name= $request->input('last_name');
@@ -113,27 +163,27 @@ class MembersController extends Controller {
                             ->where('store_id', $store_id)
                            
                             ->orderBy('id','DESC')
-                            ->when($start_time != '', function ($query) use ($start_time) {
+                            ->when( isset($start_time) && $start_time != '', function ($query) use ($start_time) {
                                 $query->where('updated_at', '>=',  $start_time);})
-                            ->when($end_time != '', function ($query) use ($end_time) {
+                            ->when(isset($end_time) && $end_time != '', function ($query) use ($end_time) {
                                     $query->where('updated_at', '<=',  $end_time);})
-                            ->when($card_num != '', function ($query) use ($card_num) {
+                            ->when( isset($card_num) && $card_num != '', function ($query) use ($card_num) {
                                 $query->where('card_num',$card_num);})
-                            ->when($first_name != '', function ($query) use ($first_name) {
+                            ->when(isset($first_name) && $first_name != '', function ($query) use ($first_name) {
                                 $query->where('first_name', 'like', '%' . $first_name . '%');})
-                            ->when($last_name != '', function ($query) use ($last_name) {
+                            ->when(isset($last_name) && $last_name != '', function ($query) use ($last_name) {
                                 $query->where('last_name', 'like', '%' . $last_name . '%');})
-                            ->when($contact != '', function ($query) use ($contact) {
+                            ->when(isset($contact) && $contact != '', function ($query) use ($contact) {
                                 $query->where('contact',$contact);})
-                            ->when($level_id != '', function ($query) use ($level_id) {
+                            ->when(isset($level_id) && $level_id != '', function ($query) use ($level_id) {
                                 $query->where('level_id',$level_id);})
-                            ->when($gender != '', function ($query) use ($gender) {
+                            ->when(isset($gender) && $gender != '', function ($query) use ($gender) {
                                 $query->where('gender',$gender);})
-                            ->when($status != '', function ($query) use ($status) {
+                            ->when(isset($status) && $status != '', function ($query) use ($status) {
                                 $query->where('is_active',$status);})
-                            ->when($card_id != '', function ($query) use ($card_id) {
+                            ->when(isset($card_id) && $card_id != '', function ($query) use ($card_id) {
                                 $query->where('id_card',$card_id);})
-                            ->paginate(20)->toArray();
+                            ->paginate($rows)->toArray();
         $response['code']=1;
         $response['msg']='';
         return response()->json($response);
@@ -147,7 +197,7 @@ class MembersController extends Controller {
 
        // $store_id = $shop_owner->shop()->value('id');
 	$store_id = $shop_owner->store_id;
-
+        $rows=$request->input('rows',20);
         $card_num= $request->input('card_num');
         $first_name= $request->input('first_name');
         $last_name= $request->input('last_name');
@@ -173,7 +223,7 @@ class MembersController extends Controller {
                             $query->where('is_active',$status);})
                         ->when($card_id != '', function ($query) use ($card_id) {
                             $query->where('id_card',$card_id);})
-                        ->orderBy('id','DESC')->paginate(20)->toArray();
+                        ->orderBy('id','DESC')->paginate($rows)->toArray();
         $response['code']=1;
         $response['msg']='';
         return response()->json($response);
@@ -268,9 +318,9 @@ class MembersController extends Controller {
             $member->points =(float) $request->input('points');
             $member->level_id = (int) $request->input('level_id');
             $member->expiration_date = $request->input('expiration_date'); 
-            $member->birthday = $request->input('birthday');
+            //$member->birthday = $request->input('birthday');
             $member->remarks =$request->input('remarks');
-            $member->id_card = $request->input('id_card');
+            //$member->id_card = $request->input('id_card');
             $member->is_active = $request->input('is_active'); 
             //$member->card_barcode = $request->input('card_barcode');   
             $member->adress = $request->input('adress'); 
@@ -306,7 +356,7 @@ class MembersController extends Controller {
             return response()->json(["code"=>0,"msg"=>"member not found"]);
         }
         else {
-                       $response['code'] = 1;
+            $response['code'] = 1;
             $response['msg'] = "success";
             $response['data'] = $member;
             return response()->json($response);

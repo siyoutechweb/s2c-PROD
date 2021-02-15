@@ -28,6 +28,8 @@ class FundsController extends Controller {
                         {$q->whereIn('chain_id',$chains);})
                         ->paginate(20);
         
+                                $response['code']=1;
+        $response['msg']="";
         // $response['code'] = 1;
         // $response['msg'] = "";
         // $response= $funds;

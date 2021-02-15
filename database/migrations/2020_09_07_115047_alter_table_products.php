@@ -30,7 +30,7 @@ class AlterTableProducts extends Migration
 
         }
         $table->integer('warn_quantity')->after('product_quantity')->default(0);
-        //$table->float('discount_value2')->after('discount_value1');
+        
         
 
         });

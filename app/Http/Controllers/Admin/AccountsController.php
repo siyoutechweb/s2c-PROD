@@ -14,7 +14,7 @@ class AccountsController extends Controller {
     {
         $this->middleware('auth:api');
     }
-
+    
     // get the list of inactive shopOwner's account
     public function getInactiveAccount(Request $request)
     {

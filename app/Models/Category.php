@@ -36,7 +36,7 @@ class Category extends Model {
     }
 
     public function subCategories() {
-        return $this->hasMany(Category::class, 'parent_category_id');
+        return $this->hasMany(Category::class, 'parent_category_id')->orderBy('category_order');
     }
 
     public function productBase() {

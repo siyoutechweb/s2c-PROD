@@ -29,7 +29,8 @@ class ProductStatisticsListener
         ];
         $rs=StatisticProduct::where($where)->first();
         StatisticProduct::updateOrCreate($where,
-            [ 
+            [
+                'supplier_id' => $product->data['supplier_id'],
                 'price'=>$product->data['price'],
                 'sales' => DB::raw($rs?'sales+' . $product->data['quantity']: $product->data['quantity'])
             ]);

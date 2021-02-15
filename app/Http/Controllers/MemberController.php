@@ -1,5 +1,6 @@
 <?php namespace App\Http\Controllers;
 use Illuminate\Http\Request;
+use App\Models\Member;
 use DB;
 
 //chineese team
@@ -36,15 +37,15 @@ class MemberController extends Controller {
     
 
     //public function show_url(){
-    public function showUrl(){
-        $data = Uuid::uuid1();
-        $str = $data->getHex();    //32位字符串方法
-        $img = $this->create_img("$str");
-        echo "<br>$str";;
-        echo "<br>";
-        $url='https://siyou-b2s2c-stag.herokuapp.com/shop/shopoverview?token=' . $str;//要转成二维码的url地址
-        $img = $this->createImg("$url");
-    }
+    // public function showUrl(){
+    //     $data = Uuid::uuid1();
+    //     $str = $data->getHex();    //32位字符串方法
+    //     $img = $this->create_img("$str");
+    //     echo "<br>$str";;
+    //     echo "<br>";
+    //     $url='https://siyou-b2s2c-stag.herokuapp.com/shop/shopoverview?token=' . $str;//要转成二维码的url地址
+    //     $img = $this->createImg("$url");
+    // }
 
     public function setRedis($val){
         Redis::set('name', 'guwenjie');
@@ -52,22 +53,22 @@ class MemberController extends Controller {
         return $values;
     }
 
-    public function testRedis()
-    {
-        Redis::set('name', 'guwenjie');
-        $values = Redis::get('name');
-        dd($values);
-        //输出："guwenjie"
-        //加一个小例子比如网站首页某个人员或者某条新闻日访问量特别高，可以存储进redis，减轻内存压力
-        $userinfo = Member::find(id);
-        Redis::set('user_key',$userinfo);
-        if(Redis::exists('user_key')){
-            $values = Redis::get('user_key');
-        }else{
-            $values = Member::find(id);
-        }
-        dump($values);
-    }
+    // public function testRedis()
+    // {
+    //     Redis::set('name', 'guwenjie');
+    //     $values = Redis::get('name');
+    //     dd($values);
+    //     //输出："guwenjie"
+    //     //加一个小例子比如网站首页某个人员或者某条新闻日访问量特别高，可以存储进redis，减轻内存压力
+    //     $userinfo = Member::find(id);
+    //     Redis::set('user_key',$userinfo);
+    //     if(Redis::exists('user_key')){
+    //         $values = Redis::get('user_key');
+    //     }else{
+    //         $values = Member::find(id);
+    //     }
+    //     dump($values);
+    // }
 
     //private function create_img($url){
 
@@ -124,12 +125,12 @@ class MemberController extends Controller {
     }
 
     //接收二维码跳转后传参,校验用户登录跳转
-    public function toLogin(Request $request){
-        $token = $request->input('token');
-        $user_id = $request->input('user_id');
-        $shop_owner = AuthController::respondWithToken($token);
+    // public function toLogin(Request $request){
+    //     $token = $request->input('token');
+    //     $user_id = $request->input('user_id');
+    //     $shop_owner = AuthController::respondWithToken($token);
 
-    }
+    // }
 
 
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\cachier;
+use App\Models\Supplier;
 use App\Models\Chain;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -35,21 +36,17 @@ class UsersController extends Controller {
             $chain_id = '';
         }
         $managerList=$shop_owner->ShopOwnerManager($chain_id)->get();
-	//var_dump($managerList);
-//echo gettype($managerList);
         if($managerList) {
 	    if($chain_id!='') {
                 $managerList =array_values( array_filter($managerList->toArray(),function($query) use($chain_id) {
-                    //stristr
+                    
                     return $query['chain_id']==$chain_id;
                 }));
 	            }else {$managerList = $managerList->toArray();}
 	     foreach($managerList as $Manager) {
-		//echo gettype($Manager);
-               //echo $Manager['chain_id'];
 		 if($Manager['chain_id']) 
                 {
-			//echo $Manager['chain_id'];
+	
                     $arr = array('chain_name'=> Chain::where('id',$Manager['chain_id'])->first()->chain_name);
                     $Manager = array_push($Manager, $arr);                }
               
@@ -80,21 +77,21 @@ class UsersController extends Controller {
 	    
 	    if($chain_id!='') {
                 $managerList =array_values( array_filter($managerList->toArray(),function($query) use($chain_id) {
-                    //stristr
+                   
                     return $query['chain_id']==$chain_id;
 
                 }));
                 $managerList = (object)$managerList;
 	            }
 	     foreach($managerList as $Manager) {
-            //echo gettype($Manager);
-$Manager = (object) $Manager;
-echo $Manager->chain_id;
+           
+		$Manager = (object) $Manager;
+		
 		 if($Manager->chain_id) 
-                {
-                    //echo $Manager->chain_id;
+                 {
+  
                    $Manager->chain_name =Chain::where('id',$Manager->chain_id)->first()->chain_name;
-                   //array_push($Manager, $arr);               
+              
                  }
               
             }
@@ -119,8 +116,7 @@ echo $Manager->chain_id;
         if($operatorsList) {
 	   if($chain_id!='') {
                 $operatorsList =array_values( array_filter($operatorsList->toArray(),function($query) use($chain_id) {
-                    //stristr
-                    return $query['chain_id']==$chain_id;
+                return $query['chain_id']==$chain_id;
                 }));
             }
             $response['code'] = 1;
@@ -153,34 +149,25 @@ echo $Manager->chain_id;
      - Parameters: 'token'
        Accessible for : ShopOwner
     */
-    public function getCachiersList(Request $request)
+        public function getCachiersList(Request $request)
     {
-        $shop_owner = AuthController::me();
-        //echo $shop_owner->shop->id;
-        // $cachierList=$shop_owner->ShopOwnerCachier()->get();
-        $cachierList=Cachier::where('store_id',$shop_owner->shop->id)->get();
-        if($request->has('chain_id')) {
-            $chain_id =  $request->input('chain_id');
-            $cachierList =array_values( array_filter($cachierList->toArray(),function($query) use($chain_id) {
-                //stristr
-                return $query['chain_id']==$chain_id;
-            }));
-        }
-else {$cachierList = $cachierList->toArray();}
-        if($request->has('name') && !empty($request->input('name') )) {
-            $name = $request->input('name');
-            $cachierList =array_values( array_filter($cachierList,function($query) use($name ) {
-               //return strpos($query['first_name'],$name) ||strpos($query['last_name'],$name);
-		return is_numeric(strpos($query['first_name'],$name)) ||is_numeric(strpos($query['last_name'],$name));
-                //return $query['name ']==$name ;
-            }));
-        }
-
-        //echo gettype($cachierList);
+        $shop_owner = AuthController::meme();
+        $chain_id =  $request->input('chain_id');
+        $userchain=$shop_owner->chain_id;
+        $name = $request->input('name');
+        $cachierList=Cachier::where('store_id',$shop_owner->store_id)
+	->where('hidden',0)
+        ->when($chain_id != '', function ($query) use ($chain_id) {
+            $query->where('chain_id',$chain_id);})
+        ->when($userchain != '', function ($query) use ($userchain) {
+                $query->where('chain_id',$userchain);})
+        ->when($name != '', function ($query) use ($name) {
+                    $query->where('first_name','like',$name)->orWhere('last_name','like',$name);})
+            ->get()->toArray();
+        
          return response()->json($cachierList, 200);
 
     }
-
     /* get manager from his email
      - Parameters: 'token','manager_email'
        Accessible for : ShopOwner
@@ -280,7 +267,94 @@ else {$cachierList = $cachierList->toArray();}
 
 public function getCurrentUser() {
         $user = AuthController::me();
+        //id, user_id, chain_id, b2s_products, purchased, my_wishlist, invalid_orders, valid_orders, paid_orders, add_product, product_list, affect_discount, discounted_products_list, member_list, level_list, shop_managers_list, add_new_shop_manager, 
+        //store_list, add_new_store, suppliers_list, inventory, stock_management, my_account, created_at, updated_at, warehouse, 
+        //funds_by_cash, funds_by_card, funds_by_check, statistics, update_product, add_quick_purchase, purchase_order, siyou_suppliers,
+        // my_suppliers, siyou_categories, my_category, promotion_history, promotion_list, discount_history, sales_funds, accounts_payable,
+        // payment_methods, shop_operators_list, add_shop_operator, shop_cashiers_list, add_shop_cashier, advertisement, inventory_management,
+        // warehouse_management, returned_goods, b2s_order_management, discount_list, inventory_history
+        $user->menu = DB::table('menu')->where('user_id',$user->id)->first();
+        if(!$user->menu) {
+            $user->menu=[
+                "user_id"=>$user->id,
+                "chain_id"=>null,
+                "b2s_products"=>1,
+                "purchased"=>1,
+                "my_wishlist"=>1,
+                "invalid_orders"=>1,
+                "valid_orders"=>1,
+                "paid_orders"=>1,
+                "s2c_orders_list"=>1,
+                "add_product"=>1,
+                "product_list"=>1,
+                "affect_discount"=>1,
+                "discounted_products_list"=>1,
+                "member_list"=>1,
+                "level_list"=>1,
+                "shop_managers_list"=>1,
+                "add_new_shop_manager"=>1,
+                "store_list"=>1,
+                "add_new_store"=>1,
+                "suppliers_list"=>1,
+                "inventory"=>1,
+                "stock_management"=>1,
+                "my_account"=>1,
+                "warehouse"=>1,
+                "funds_by_cash"=>1,
+                "funds_by_card"=>1,
+                "funds_by_check"=>1,
+                "statistics"=>1,
+                "update_product"=>1,
+                "add_quick_purchase"=>1,
+                "purchase_order"=>1,
+                "siyou_suppliers"=>1,
+                "my_suppliers"=>1,
+                "siyou_categories"=>1,
+                "my_category"=>1,
+                "promotion_history"=>1,
+                "promotion_list"=>1,
+                "discount_history"=>1,
+                "sales_funds"=>1,
+                "accounts_payable"=>1,
+                "payment_methods"=>1,
+                "shop_operators_list"=>1,
+                "add_shop_operator"=>1,
+                "shop_cashiers_list"=>1,
+                "add_shop_cashier"=>1,
+                "advertisement"=>1,
+                "inventory_management"=>1,
+                "warehouse_management"=>1,
+                "returned_goods"=>1,
+                "warehouse_management"=>1,
+                "b2s_order_management"=>1,
+                "discount_list"=>1,
+                "inventory_history"=>1,
+                "B2s"=>1,
+                "s2c"=>1
+                
+
+            ];
+        }
         return response()->json($user);
     }
+
+public function getManagersList2(Request $request)
+    {
+        $shop_owner = AuthController::meme();
+        $chain_id = $request->input('chain_id');
+        if(!$chain_id ||empty($chain_id)) {
+            $chain_id = '';
+        }
+	$managers=User::where('shop_owner_id',$shop_owner->id)->where('role_id',2)->with('chain')->when($chain_id!='',function($query)use($chain_id) {
+
+	$query->where('chain_id',$chain_id);
+	})->get();
+	$response['code'] = 1;
+	$response['msg'] = "";
+	$response['data'] = $managers;
+return response()->json($response);
+        
+    }
+
 
 }

@@ -79,6 +79,7 @@ class LevelsController extends Controller {
             $level->end_point = $request->input('end_point');
             $level->description = $request->input('description');
             $level->increment_point = $request->input('increment_point');
+            $level->discount_percent = $request->input('discount_percent');
             $level->store_id = $store_id;
             
             if ($level->save()) {
@@ -113,13 +114,27 @@ class LevelsController extends Controller {
         $store_id= $request->input('store_id');
         // $level_id = $request->input('level_id');
         $level = Member_level :: find($level_id);
-        if ($request->filled('level_name','start_point','end_point')) 
-        {
-            $level->level = $request->input('level_name');
-            $level->start_point = $request->input('start_point');
-            $level->end_point = $request->input('end_point');
-            $level->description = $request->input('description');
-            $level->increment_point = $request->input('increment_point');
+        if(!$level) {return response()->json(['code'=>0,'msg'=>'','data'=>'error while updating']);}
+        // if ($request->filled('level_name','start_point','end_point')) 
+        // {
+            $level_name=$request->input('level_name');
+            if(isset($level_name) && $level_name!="") {$level->level = $level_name;}
+            $start_point=$request->input('start_point');
+            if(isset($start_point) && $start_point!="") {$level->start_point = $start_point;}
+            //$level->start_point = $request->input('start_point');
+            $end_point=$request->input('end_point');
+            if(isset($end_point) && $end_point!="") {$level->end_point = $end_point;}
+
+            //$level->end_point = $request->input('end_point');*
+            $description=$request->input('description');
+            if(isset($description) && $description!="") {$level->description = $description;}
+            //$level->description = $request->input('description');
+            $increment_point=$request->input('increment_point');
+            if(isset($increment_point) && $increment_point!="") {$level->increment_point = $increment_point;}
+
+            //$level->increment_point = $request->input('increment_point');
+            $discount_percent=$request->input('discount_percent');
+            if(isset($discount_percent) && $discount_percent!="") {$level->discount_percent = $discount_percent;}
             $level->store_id = $store_id;
             
             if ($level->save()) {
@@ -134,12 +149,12 @@ class LevelsController extends Controller {
             $response['msg']='3';
             $response['data']='error while saving';
             return response()->json($response);
-        }
-        $response = array();
-        $response['code']=0;
-        $response['msg']='1';
-        $response['data']='parameters missing, in data field';
-        return response()->json($response); 
+        //}
+        // $response = array();
+        // $response['code']=0;
+        // $response['msg']='1';
+        // $response['data']='parameters missing, in data field';
+        // return response()->json($response); 
 
     }
 

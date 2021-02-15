@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Models\Order;
 use App\Models\Member;
 use App\Models\Product;
+use App\Models\ProductWarningHistory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -241,7 +242,10 @@ class OrdersController extends Controller
         if (!$start_date) {
             $start_date = '';
         }
-
+        $cashier_id = $request->input('cashier_id');
+        if(!$cashier_id) {
+            $cashier_id='';
+        }
         $keyWord = $request->input('keyword');
         $end_date = $request->input('end_date');
         if (!$end_date) {
@@ -262,13 +266,16 @@ class OrdersController extends Controller
             ->when($chain_id != '', function ($query) use ($chain_id) {
                 $query->where('chain_id', $chain_id);
             })
+            ->when($cashier_id != '', function ($query) use ($cashier_id) {
+                $query->where('cachier_id', $cashier_id);
+            })
             ->when($payment_method_id != '', function ($query) use ($payment_method_id) {
                 $query->where('payment_method_id', $payment_method_id);
             })
             ->when($start_date != '', function ($query) use ($start_date) {
                 $query->whereDate('created_at', '=', $start_date);
             })
-            ->when($end_date != '', function ($query) use ($start_date) {
+            ->when($end_date != '', function ($query) use ($end_date) {
                 $query->whereDate('created_at', '<=', $end_date);
             })
             ->when($keyWord != '', function ($q) use ($keyWord) {
@@ -289,7 +296,11 @@ class OrdersController extends Controller
         $keyWord = $request->input('keyword');
 
         $payment_method_id = $request->input('payment_method_id');
+        $cashier_id = $request->input('cashier_id');
         $start_date = $request->input('start_date');
+        if(!$cashier_id) {
+            $cashier_id = "";
+        }
         if (!$start_date) {
             $start_date = '';
         }
@@ -320,10 +331,13 @@ class OrdersController extends Controller
             ->when($payment_method_id != '', function ($query) use ($payment_method_id) {
                 $query->where('payment_method_id', $payment_method_id);
             })
+            ->when($cashier_id != '', function ($query) use ($cashier_id) {
+                $query->where('cachier_id', $cashier_id);
+            })
             ->when($start_date != '', function ($query) use ($start_date) {
                 $query->whereDate('created_at', '=', $start_date);
             })
-            ->when($end_date != '', function ($query) use ($start_date) {
+            ->when($end_date != '', function ($query) use ($end_date) {
                 $query->whereDate('created_at', '<=', $end_date);
             })
             ->when($keyWord != '', function ($q) use ($keyWord) {
@@ -761,9 +775,10 @@ class OrdersController extends Controller
         //$orders = $request->input('orders');
         $order = $request->post();
         $store_id = $request->input('store_id');
+        $order_cost = 0;
 
         try {
-            DB::transaction(function () use ($order, $store_id) {
+            DB::transaction(function () use ($order, $store_id,$order_cost) {
                 $new_order = new Order();
                 // foreach ($orders as $order) {
                 $mem_card = isset($order['card_number']) && preg_match('/^\d+$/', $order['card_number']) ? $order['card_number'] : 0;
@@ -785,6 +800,7 @@ class OrdersController extends Controller
                 $new_order->invoice = $order['invoice'];//invoice
                 $new_order->product_quantity = $order['product_quantity'];//produt_quantity
                 $new_order->operator = $order['operator'];
+		        $new_order->order_cost=0;
                 $new_order->save();
                 $products = json_decode($order['order_items'], 1);
                 while (gettype($products) == 'string') {
@@ -796,6 +812,7 @@ class OrdersController extends Controller
                         $product = Product::find($prod['product_id']);
                         $product->product_quantity = $product->product_quantity - $prod['order_item_quantity'];
                         $product->save();
+                        $order_cost += $prod['order_item_quantity'] * $product->cost_price;
                         //Sync update products statistics
                         event(new ProductStatisticsEvent(
                             $product['id'],
@@ -803,8 +820,21 @@ class OrdersController extends Controller
                             $order['store_id'],
                             $order['chain_id'],
                             $prod['order_item_amount'],
-                            $product['category_id']
+                            $product['category_id'],
+			    $product['supplier_id']
                         ));
+			ProductWarningHistory::updateOrCreate([
+                            'product_id' => $prod['product_id'],
+                            'days' => Date('Y-m-d', time()),
+                            'store_id' => $order['store_id'],
+                            'chain_id' => $order['chain_id']],
+                            [
+                            'product_id' => $prod['product_id'],
+                            'store_id' => $order['store_id'],
+                            'chain_id' => $order['chain_id'],
+                            'warn_quantity' => $product['warn_quantity'],
+                            'inventory' => $product['product_quantity'],
+                        ]);
                     }
 
                     //insert into product_item_order
@@ -833,11 +863,15 @@ class OrdersController extends Controller
                     //insetion end
                 }
                 if ($mem_card) {
+		   //echo $member;
                     Member::updateMemberPoints($mem_card, $mem_point, $store_id);
                 }
                 //   }
+                $update_order= Order::find($new_order->id);
+                $update_order->order_cost = $order_cost;
+                $update_order->save();
             });
-
+            
             $response['code'] = 1;
             $response['msg'] = '';
             $response['data'] = "order has been added !!";

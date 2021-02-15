@@ -117,6 +117,10 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
     public function Products()
     {
         return $this->hasMany(Product::class, 'shop_owner_id');
+    }
+	public function chain()
+    {
+        return $this->hasOne(User::class, 'chain_id');
     } 
 
     // public function getShopsThroughOrder()

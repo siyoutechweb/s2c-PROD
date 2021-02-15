@@ -7,7 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Models\user;
-use App\Models\shop;
+use App\Models\License;
+use App\Models\Shop;
 use App\Models\Chain;
 use Illuminate\Support\Facades\DB;
 
@@ -36,6 +37,7 @@ class AuthController extends Controller
         if (!$token = Auth::guard('api')->claims(['email' => $request->input('email')])->attempt($credentials)) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
+        
 
         return $this->respondWithToken($request,$token);
     }
@@ -54,6 +56,18 @@ class AuthController extends Controller
         $user = JWTAuth::toUser($token);
         $userData = User::whereEmail($user['email'])->with('role')->first();
         //echo $userData;
+        if($userData->role_id==1||$userData->role_id==2||$userData->role_id==3) {
+        $license=License::where('shop_owner_id',$userData->shop_owner_id)->orWhere('shop_owner_id',$userData->id)->first();
+        if(!$license) {
+            return response()->json(['code'=>0,'msg'=>'no licence found']);
+        }
+        if($license->finish_date<date('Y-m-d')) {
+            return response()->json(['code'=>0,'msg'=>'licence expired']);
+        }
+        }
+        if($userData->activated_account===0) {
+            return response()->json(['code'=>0,'msg'=>'account not activated']);
+        }
         $user_menu = db::table('menu')->where('user_id',$userData->id)->get();
         $userData->token=$token;
         $userData->save();
@@ -63,6 +77,9 @@ class AuthController extends Controller
            // echo $user->chain_id;
             $shop = Chain::find($user->chain_id)->store_id;
         }
+	if($shop) {
+            $store_name = Shop::find($shop)->store_name;
+        } else {$store_name=null;}
         if(empty($shop))
         {
             $userData->store_id = null;
@@ -70,6 +87,8 @@ class AuthController extends Controller
         //$origin =$request->headers->all();
       //var_dump ($origin);
         $userData->store_id =$shop;
+	if($store_name) {
+	 $userData->store_name =$store_name; }
         //$userData['url'] =$origin["user-agent"];
         $userData->user_menu =$user_menu;
         // $userData->access_token =$token;
@@ -104,6 +123,7 @@ class AuthController extends Controller
         // $user = user::where('email',$email)->first();
         $phone_num1 = JWTAuth::getPayload()->get('contact');
         $user = User::where('email','=',$email)->where('contact', $phone_num1)->first();
+       
         return $user;
     }
   public static function meme() {
@@ -159,6 +179,6 @@ class AuthController extends Controller
           return response()->json(['error' => 'Unauthorized'], 401);
       }
 
-      return $this->respondWithToken($token);
+      return $this->respondWithToken($request,$token);
     }
 }

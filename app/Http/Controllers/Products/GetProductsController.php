@@ -10,12 +10,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Chain;
+use App\Models\Supplier;
 use App\Models\ProductDiscount;
 use App\Models\QuickPrint;
 use App\Models\Discount;
 use App\Models\User;
 use Illuminate\Http\File;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Input;
 use Illuminate\Support\Facades\Storage;
 class GetProductsController extends Controller {
@@ -30,21 +32,35 @@ class GetProductsController extends Controller {
     */
     public function shopProductList(request $request)
     {
-        $shop_owner=AuthController::me();
+//echo 'hello';
+        $shop_owner=AuthController::meme();
         $chain_id = $request->input('chain_id');
         $category = $request->input('category_id');
         $barcode = $request->input('barcode');
         $keyWord = $request->input('keyword');
 	$range_id = $request->input('range_id');
+	$supplier_id = $request->query('supplier_id');
+	$userChain=$shop_owner->chain_id;
         if(!$range_id) {
             $range_id = '';
         }
+	  if(!$supplier_id) {
+            $supplier_id = '';
+        }
+//echo $supplier_id.'supplier_id';
+
         $response=Product::with('category','supplier')
-                        ->where('shop_owner_id',$shop_owner->id)
+                        ->where('shop_id',$shop_owner->store_id)
+			->when($userChain != '', function ($query) use ($userChain) {
+                        $query->where('chain_id',$userChain);})
+
                         ->when($chain_id != '', function ($query) use ($chain_id) {
                         $query->where('chain_id',$chain_id);})
 			->when($range_id != '', function ($query) use ($range_id) {
                         $query->where('range_id',$range_id);})
+			->when($supplier_id != '', function ($query) use ($supplier_id) {
+                        $query->where('supplier_id',$supplier_id);})
+
                         ->when($category != '', function ($query) use ($category) {
                         $query->where('category_id',$category);})
                         ->when($barcode != '',  function ($q) use ($barcode)
@@ -64,9 +80,15 @@ class GetProductsController extends Controller {
         $barcode = $request->input('barcode');
         $keyWord = $request->input('keyword');
         $range_id = $request->input('range_id');
+	$supplier_id = $request->query('supplier_id');
+
         if(!$range_id) {
             $range_id = '';
         }
+	 if(!$supplier_id) {
+            $supplier_id = '';
+        }
+//echo $supplier_id.'supplier_id';
         $userChain = $shop_owner->chain_id;
         //echo $userChain;
         $response=Product::with('category','supplier','ProductDiscount')
@@ -77,6 +99,11 @@ class GetProductsController extends Controller {
                         $query->where('chain_id',$chain_id);})
                         ->when($range_id != '', function ($query) use ($range_id) {
                         $query->where('range_id',$range_id);})
+			->when($supplier_id != '', function ($query) use ($supplier_id) {
+                        $query->where('supplier_id',$supplier_id);})
+                        
+    
+
                         ->when($category != '', function ($query) use ($category) {
                         $query->where('category_id',$category);})
                         ->when($barcode != '',  function ($q) use ($barcode)
@@ -88,16 +115,18 @@ class GetProductsController extends Controller {
         $response['msg']='';
         return response()->json($response);
     }
-	  public function chainProductList(request $request)
+	 public function chainProductList(request $request)
     {
+        $user = AuthController::meme();
+        $userchain=$user->chain_id;
         $category_id = $request->query('category_id');
         $supplier_id = $request->query('supplier_id');
         $chain_id = $request->query('chain_id');
-	$keyword = $request->query('keyword');
+    $keyword = $request->query('keyword');
         $barcode = $request->query('barcode');
-	$start_date = $request->input('start_date');
+    $start_date = $request->input('start_date');
         $end_date = $request->input('end_date');
-	$range_id = $request->input('range_id');
+    $range_id = $request->input('range_id');
         if (!$start_date) {
             //$start_time = Date('Y-m-d 00:00:00', strtotime('0days'));
             $start_date = '';
@@ -107,18 +136,18 @@ class GetProductsController extends Controller {
             //$end_time = Date('Y-m-d 23:59:59', time());
             $end_date = '';
         }
-	$where=[];
+    $where=[];
         if($category_id){
             $where['category_id']=$category_id;
         }
-	if($range_id){
+    if($range_id){
             $where['range_id']=$range_id;
         }
 
-        if($barcode){
-            $where['product_barcode']=$barcode;
-        }
-	  if($keyword){
+        // if($barcode){
+        //     $where['product_barcode']=$barcode;
+        // }
+      if($keyword){
             $where['product_name']=$keyword;
         }
 
@@ -128,19 +157,25 @@ class GetProductsController extends Controller {
         if($supplier_id){
             $where['supplier_id']=$supplier_id;
         }
-	//var_dump($where);
-        $shop_Owner = AuthController::me();
-	$chains_id=$shop_Owner->shop->chains()->pluck('id');
-	//var_dump($chains_id);
-	$response = Product::select('products.*')->with('discount')->where($where)
-	   ->whereIn('products.chain_id',$chains_id)
+   
+       
+   
+    //var_dump($chains_id);
+    $response = Product::select('products.*')->with('discount')->where($where)
+       ->where('products.shop_id',$user->store_id)
            ->when($start_date != '', function ($query) use ($start_date) {
             $query->where('products.updated_at', '>=',  $start_date);})
+            ->when($barcode != '' && isset($barcode) && is_numeric($barcode), function ($query) use ($barcode) {
+                $query->where('products.product_barcode',$barcode);})
+            ->when($barcode != '' && isset($barcode) && !is_numeric($barcode), function ($query) use ($barcode) {
+                    $query->where('products.product_name','like','%'.$barcode .'%');}) 
+             ->when($userchain != '', function ($query) use ($userchain) {
+            $query->where('products.chain_id',  $userchain);})
             ->when($end_date != '', function ($query) use ($end_date) {
                 $query->where('products.updated_at', '<=',  $end_date);})
            //->whereBetween('products.updated_at',[$start_date,$end_date])
            // get();
-           ->paginate(50)-> toArray();
+           ->orderBy('id','desc')->paginate(50)-> toArray();
 //appends($request->except('page'));;
 
         $response['code']=1;
@@ -172,6 +207,10 @@ class GetProductsController extends Controller {
             $response = product::where('chain_id', $chain_id)
             ->where('supplier_id', $supplier_id)->paginate(60)->toArray();   
         }
+        elseif ($request->filled('keyword')) {
+            $response = product::where('chain_id', $chain_id)
+            ->where('supplier_id', $supplier_id)->paginate(60)->toArray();   
+        }
         else 
         { $response = product::where('chain_id', $chain_id)->paginate(60)->toArray();}      
         $response['code']=1;
@@ -188,7 +227,7 @@ class GetProductsController extends Controller {
         $chain_id = $request->query('chain_id');
         $barcode = $request->query('barcode');
         $row = $request->get('row',20);
-        $shop_Owner = AuthController::me();
+        $shop_Owner = AuthController::meme();
         //$start_date = Carbon::parse($request->input('start_date'))->toDateTimeString();
         //$end_date = Carbon::parse( $request->input('end_date'))->toDateTimeString();
 
@@ -221,11 +260,13 @@ class GetProductsController extends Controller {
         // if (!$start_date || !$end_date){
         //     throw new \Exception("arguments are required");
         // }
-	$chains_id=$shop_Owner->shop->chains()->pluck('id');
-
+    //$chains_id=$shop_Owner->shop->chains()->pluck('id');
+    $store_id=$shop_Owner->store_id;
+    
        $data= product::where($where)
-           ->select('products.*')->with('ProductDiscount')->whereIn('chain_id',$chains_id)
-
+           ->select('products.*')->with('ProductDiscount')
+           //->whereIn('chain_id',$chains_id)
+            ->where('shop_id',$store_id)
            ->when($start_date != '', function ($query) use ($start_date) {
             $query->where('products.updated_at', '>=',  $start_date);})
             ->when($end_date != '', function ($query) use ($end_date) {
@@ -298,7 +339,25 @@ class GetProductsController extends Controller {
             return response()->json($response); 
         }
 //var_dump(chain::find($chain_id));
-        $product->chain_name= Chain::where('id',$chain_id)->first()->chain_name;
+	$discount = DB::table('product_discount')->where('product_id',$product->id)->first();
+	if($discount){
+	$discount_start_date = $discount->start_date;
+	$discount_end_date = $discount->finish_date;
+}else{$discount_start_date = null;
+	$discount_end_date = null;
+}
+        $product->discount_start_date= $discount_start_date;
+	$product->discount_end_date= $discount_end_date;
+
+	$product->chain_name= Chain::where('id',$chain_id)->first()->chain_name;
+	$supplier = Supplier::find($product->supplier_id);
+        if(!$supplier) {
+            $product->supplier_name= null;
+            $product->company_name= null;
+        }else {
+        $product->supplier_name= $supplier->supplier_name;
+        $product->company_name= $supplier->company_name;
+        }
 //chain::find($chain_id)->value('chain_name');
         $response = array();
         $response['code']=1;
@@ -420,7 +479,9 @@ public function getLabels(Request $request)
         {
             throw new \Exception("arguments are required");
         }
-        $data = QuickPrint::where(['chain_id'=>$chain_id])->with(['products'])->with(['chains'=>function($query) use($store_id){
+        $data = QuickPrint::where(['chain_id'=>$chain_id])->with(['products'=>function($query) use($chain_id){
+            {$query->where('chain_id',$chain_id)->get();}
+        }])->with(['chains'=>function($query) use($store_id){
             {$query->where('store_id',$store_id)->get();}
         }])->paginate($rows);
         $response = array();
@@ -457,10 +518,10 @@ public function getLabels(Request $request)
 
     public function getLabels1(Request $request)
     {
-        $shop_owner = AuthController::me();
+        $shop_owner = AuthController::meme();
         $chain_id = $request->input('chain_id');
 	
-        $store_id = $request->input('store_id');
+        $store_id = $shop_owner->store_id;
 	
         $page = $request->query('page');
         $rows = $request->query('rows', 20);
@@ -468,12 +529,21 @@ public function getLabels(Request $request)
         {
             throw new \Exception("arguments are required");
         }
-        $data = QuickPrint::where(['chain_id'=>$chain_id])->with(['products'])->with(['chains'=>function($query) use($store_id){
-            {$query->where('store_id',$store_id)->get();}
-        }])->paginate($rows);
+
+        $data = QuickPrint::where(['chain_id'=>$chain_id])
+            // ->with(['products1'=>function($query) use($chain_id){
+            //     {$query->where('chain_id',$chain_id)->get();}
+            // }])->with(['chains'=>function($query) use($store_id){
+            //     {$query->where('store_id',$store_id)->get();}
+            // }])
+        ->paginate($rows);
+        foreach($data as $quick) {
+            $quick->products=Product::where('product_barcode',$quick->product_barcode)->where('chain_id',$chain_id)->with('ProductDiscount')->first();
+            $quick->chains=Chain::find($chain_id);
+        }
         $response = array();
         $response['code'] = 1 ;
-        $response['msg'] = "hgfhgfhgh";
+        $response['msg'] = "";
         $response['data'] = $data;
         return response()->json($response, 200);
     }
@@ -562,5 +632,93 @@ public function getLabels(Request $request)
  
         
         return response()->json($response, 200);
+    }
+public function shopProductListExpiration(request $request)
+    {
+//echo 'hello';
+        $shop_owner=AuthController::meme();
+        $chain_id = $request->input('chain_id');
+        $category = $request->input('category_id');
+        $barcode = $request->input('barcode');
+        $keyWord = $request->input('keyword');
+	$range_id = $request->input('range_id');
+	$supplier_id = $request->query('supplier_id');
+        if(!$range_id) {
+            $range_id = '';
+        }
+	  if(!$supplier_id) {
+            $supplier_id = '';
+        }
+//echo $supplier_id.'supplier_id';
+        $expired=date('Y-m-d', strtotime("-3 days"));
+	$userChain = $shop_owner->chain_id;
+        $response=Product::with('category','supplier')
+                        ->where('shop_id',$shop_owner->store_id)
+                        ->when($chain_id != '', function ($query) use ($chain_id) {
+                        $query->where('chain_id',$chain_id);})
+			->when($userChain != '', function ($query) use ($userChain) {
+                        $query->where('chain_id',$userChain);})
+
+			->when($range_id != '', function ($query) use ($range_id) {
+                        $query->where('range_id',$range_id);})
+			->when($supplier_id != '', function ($query) use ($supplier_id) {
+                        $query->where('supplier_id',$supplier_id);})
+
+                        ->when($category != '', function ($query) use ($category) {
+                        $query->where('category_id',$category);})
+                        ->when($barcode != '',  function ($q) use ($barcode)
+                        {$q->where('product_barcode','like','%'.$barcode. '%')->get();})
+                        ->when($keyWord != '', function ($q) use ($keyWord)
+                        { $q->where('product_name', 'like', '%' . $keyWord . '%');})
+                        ->when($expired != '', function ($query) use ($expired) {
+                            $query->where('expired_date','=',$expired);})
+                        ->orderBy('id','DESC')->paginate(20)->toArray();
+        $response['code']=1;
+        $response['msg']='';
+        return response()->json($response);
+    }
+    public function shopProductListWarningQuantity(request $request)
+    {
+//echo 'hello';
+        $shop_owner=AuthController::meme();
+        $chain_id = $request->input('chain_id');
+        $category = $request->input('category_id');
+        $barcode = $request->input('barcode');
+        $keyWord = $request->input('keyword');
+	$range_id = $request->input('range_id');
+	$supplier_id = $request->query('supplier_id');
+        if(!$range_id) {
+            $range_id = '';
+        }
+	  if(!$supplier_id) {
+            $supplier_id = '';
+        }
+//echo $supplier_id.'supplier_id';
+        
+	$userChain = $shop_owner->chain_id;
+        $response=Product::with('category','supplier')
+                        ->where('shop_id',$shop_owner->store_id)
+                        ->when($chain_id != '', function ($query) use ($chain_id) {
+                        $query->where('chain_id',$chain_id);})
+                        ->whereColumn('product_quantity', 'warn_quantity')
+			->when($userChain != '', function ($query) use ($userChain) {
+                        $query->where('chain_id',$userChain);})
+
+			->when($range_id != '', function ($query) use ($range_id) {
+                        $query->where('range_id',$range_id);})
+			->when($supplier_id != '', function ($query) use ($supplier_id) {
+                        $query->where('supplier_id',$supplier_id);})
+
+                        ->when($category != '', function ($query) use ($category) {
+                        $query->where('category_id',$category);})
+                        ->when($barcode != '',  function ($q) use ($barcode)
+                        {$q->where('product_barcode','like','%'.$barcode. '%')->get();})
+                        ->when($keyWord != '', function ($q) use ($keyWord)
+                        { $q->where('product_name', 'like', '%' . $keyWord . '%');})
+                        
+                        ->orderBy('id','DESC')->paginate(20)->toArray();
+        $response['code']=1;
+        $response['msg']='';
+        return response()->json($response);
     }
 }

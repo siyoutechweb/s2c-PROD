@@ -90,5 +90,14 @@ class WarehousesController extends Controller {
         $response['data']="Error while saving";
         return response()->json($response);
     }
+     public function getWarehouseById(Request $request,$id) {
+        $user = AuthController::me();
+        $warehouse =  Warehouse::where('id',$id)->where('shop_owner_id',$user->id)->first();
+        $response['code']=1;
+        $response['msg']='';
+        $response['data']=$warehouse;
+        return response()->json($response);
+
+    }
 
 }

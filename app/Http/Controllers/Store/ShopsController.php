@@ -56,7 +56,7 @@ class ShopsController extends Controller {
         {
             $path = $request->file('store_logo')->store('logos', 'public');
             $fileUrl = Storage::url($path);
-            $product->store_logo = $fileUrl;
+            $$shop->store_logo = $fileUrl;
         }
         
         if($shop->save())
@@ -91,7 +91,7 @@ class ShopsController extends Controller {
         //echo 'hi';
         $shop_manager = AuthController::me();
         //echo $shop_manager;
-        if($shop_manager->role_id ==2){
+        if($shop_manager->role_id ==2 ||$shop_manager->role_id==3){
             $chain_id = $shop_manager->chain_id;
         // $store_id=$request->query('store_id');
         // $store_id=$shop_owner->shop()->value('id');

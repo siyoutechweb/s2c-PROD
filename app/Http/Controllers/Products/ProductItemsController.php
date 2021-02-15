@@ -204,7 +204,7 @@ class ProductItemsController extends Controller
     // public function uploadImage(Request $request)
     // {
     //     if ($request->hasFile('product_item_image')) {
-    //         $path = $request->file('product_item_image')->store('products', 'google');
+    //         $path = $request->file('product_item_image')->store('products', 'public');
     //         $fileUrl = Storage::url($path);
     //         $image = DB::table('product_images')->insert([
     //             "image_url" => $fileUrl

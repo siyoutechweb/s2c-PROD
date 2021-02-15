@@ -84,7 +84,7 @@ class CashRegistersController extends Controller {
     public function getCashiersList(Request $request)
     {
         $chain_id = $request->input('chain_id');
-        $cachiers = DB::table('cachiers')->where('chain_id','=',$chain_id)->get(['id','first_name','last_name','password','is_manager']);
+        $cachiers = DB::table('cachiers')->where('chain_id','=',$chain_id)->where('hidden','=',0)->get(['id','first_name','last_name','password','is_manager','is_active']);
         $response['code']= 1;
         $response['msg']='';
         $response['data']=$cachiers;

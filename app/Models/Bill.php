@@ -5,7 +5,7 @@ use App\Models\Shop;
 
 class Bill extends Model {
 
-    protected $fillable = ['store_id', 'chain_id', 'company_country', 'company', 'person_tax_code', 'vat_number', 'country', 'province', 'city', 'address', 'capital', 'pec', 'code_destination', 'phone', 'fax', 'email'];
+    protected $fillable = ['store_id', 'chain_id', 'company_country', 'company', 'person_tax_code', 'vat_number', 'country', 'province', 'city', 'address', 'zipcode', 'pec', 'code_destination', 'phone', 'fax', 'email'];
 
     protected $dates = [];
 

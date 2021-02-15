@@ -1,7 +1,7 @@
 <?php namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model; 
-
+use Illuminate\Database\Eloquent\SoftDeletes; 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Models\Category;
@@ -15,10 +15,12 @@ use App\Models\QuickPrint;
 
 class Product extends Model {
 
- 
+    use SoftDeletes;
 
-   protected $fillable = [ 'product_name','product_barcode','product_description','product_image','unit_price','cost_price','discount_price','member_price','member_point','tax_rate','product_weight','product_size','product_color','supplier_id','product_quantity','warn_quantity','expired_date','category_id','shop_owner_id','shop_id','chain_id','created_at','updated_at','deleted_at'];
-    protected $dates = [];
+    protected $dates = ['deleted_at'];
+
+   protected $fillable = [ 'product_name','product_barcode','product_description','product_image','unit_price','cost_price','discount_price','member_price','member_point','tax_rate','product_weight','product_size','product_color','supplier_id','product_quantity','warn_quantity','expired_date','category_id','shop_owner_id','shop_id','chain_id','created_at','updated_at','deleted_at','range_id'];
+   
 
     public static $rules = [
         // Validation rules
@@ -54,6 +56,7 @@ class Product extends Model {
     {
         return $this->belongsTo(Product::class,'product_barcode');
     }
+
     public function ProductDiscount()
     {
         return $this->hasOne(Product_discount::class,'product_id','id')->select(['id','discount_id','product_id','discount_value1','discount_value2','start_date','finish_date']);
@@ -72,26 +75,30 @@ class Product extends Model {
 
         foreach ($data as  $value) 
         {
-            $supplier_id= supplier::where('first_name',$value->supplier_name)
-                          ->orWhere('last_name',$value->supplier_name)->value('id');
-            $category_id= category::where('category_name',$value->category_name)->value('id');
-            $arr[] = ['product_name' => $value->product_name, 
+           // $supplier_id= supplier::where('first_name',$value->supplier_name)
+                        //  ->orWhere('last_name',$value->supplier_name)->value('id');
+           // $category_id= category::where('category_name',$value->category_name)->value('id');
+            $arr[] = ['id'=>$value->id,
+'product_name' => $value->product_name, 
                     'product_barcode' => $value->product_barcode,
                     'product_description' => $value->product_description,
-                    'product_image' => $value->product_image,
+                    //'product_image' => $value->product_image,
                     'cost_price' => (float)$value->cost_price,
                     'unit_price' => (float)$value->unit_price,
-                    'member_price' => (float)$value->member_price,
+                    'member_price' => (float)$value->unit_price,
                     'tax_rate' => $value->tax_rate,
-                    'product_weight' => $value->product_weight,
-                    'product_size' => $value->product_size,
-                    'product_color' => $value->product_color,
+                    'product_weight' => 0,
+                    'product_size' => 0,
+                    'product_color' => 0,
                     'product_quantity' => $value->product_quantity,
-                    'supplier_id' => $supplier_id,
-                    'shop_owner_id' =>$shop_owner_id,
+                    'supplier_id' => $value->supplier_id,
+                    'shop_owner_id' =>$value->shop_owner_id,
                     'chain_id' =>$chain_id,
                     'shop_id' =>$store_id,
-                    'category_id' => $category_id,
+                    'category_id' => $value->category_id,
+		    'item_return'=>0,
+		    'created_at'=>Carbon::now(),
+		    'updated_at'=>Carbon::now()
                     ];
         }
        if (!empty($arr)) { DB::table('products')->insert($arr);}
